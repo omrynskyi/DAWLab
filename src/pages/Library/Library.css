@@ -1372,6 +1372,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: 20px;
   padding-right: 8px;
   flex-shrink: 0;
 }

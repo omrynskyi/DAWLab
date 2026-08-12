@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Copy, FolderOpen, Check } from "lucide-react";
 import { ChangeProjectPathModal } from '@/components/ChangeProjectPathModal';
 import { TagChip } from '@/components/ui/TagChip';
 import { TagInput } from '@/components/ui/TagInput';
+import { buildTagSuggestions } from '@/lib/tags';
 import "./ProjectSettings.css";
 
 interface ProjectSettingsProps {
@@ -53,18 +54,27 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
   // Tag colors state
   const [tagColors, setTagColors] = useState<Record<string, string>>({});
+  // Every tag used across the library, so the input can suggest existing ones.
+  const [knownTags, setKnownTags] = useState<string[]>([]);
 
   // Load project details and tag colors on mount
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [details, colors] = await Promise.all([
+        const [details, colors, allProjects] = await Promise.all([
           window.ipcRenderer.invoke('get-project-details', projectId),
-          window.ipcRenderer.invoke('load-tag-colors')
+          window.ipcRenderer.invoke('load-tag-colors'),
+          window.ipcRenderer.invoke('get-all-projects').catch(() => null),
         ]);
 
         setTagColors(colors || {});
+
+        const gathered = new Set<string>();
+        for (const p of (allProjects?.projects || [])) {
+          for (const t of (p.tags || [])) gathered.add(t);
+        }
+        setKnownTags(Array.from(gathered));
 
         setEditingProject({
           id: projectId,
@@ -85,6 +95,13 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
     loadData();
   }, [projectId]);
+
+  // Existing tags (library-wide + colored) plus curated defaults, for the picker.
+  const tagSuggestions = useMemo(() => {
+    const known = new Set<string>(knownTags);
+    for (const t of Object.keys(tagColors)) known.add(t);
+    return buildTagSuggestions(Array.from(known), tagColors);
+  }, [knownTags, tagColors]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -379,6 +396,8 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   }}
                   maxLength={30}
                   placeholder="Add tag..."
+                  suggestions={tagSuggestions}
+                  appliedTags={editingProject.tags || []}
                 />
               </div>
             </div>

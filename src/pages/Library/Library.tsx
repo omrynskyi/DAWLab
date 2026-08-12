@@ -29,6 +29,7 @@ import {
   FACET_GROUP_LABELS,
 } from '@/lib/facets';
 import type { Facet } from '@/lib/facets';
+import { buildTagSuggestions } from '@/lib/tags';
 import { useLibraryPreview } from '@/hooks/useLibraryPreview';
 import { FolderPeek } from '@/components/FolderPeek';
 import { DitherGradient, EMPTY_LIBRARY_DITHER } from '@/components/ui/DitherGradient';
@@ -756,6 +757,15 @@ export const Library: React.FC = () => {
     });
   }, [activeFacets, facetByKey]);
 
+  // Every tag known across the library (used + colored), plus curated defaults —
+  // the pool offered when adding a tag to any project.
+  const tagSuggestions = useMemo(() => {
+    const known = new Set<string>();
+    for (const p of projects) for (const t of p.tags || []) known.add(t);
+    for (const t of Object.keys(tagColors)) known.add(t);
+    return buildTagSuggestions(Array.from(known), tagColors);
+  }, [projects, tagColors]);
+
   // Shared rectangular facet chip (used in both the filter panel and the on-page bar).
   const renderFacetChip = (
     key: string,
@@ -1382,6 +1392,7 @@ export const Library: React.FC = () => {
             y={tagPopover.y}
             tags={proj?.tags || []}
             tagColors={tagColors}
+            suggestions={tagSuggestions}
             onAddTag={(tag, color) => handleTagPopoverAdd(tagPopover.projectId, tag, color)}
             onRemoveTag={(tag) => handleTagPopoverRemove(tagPopover.projectId, tag)}
             onClose={() => setTagPopover(null)}

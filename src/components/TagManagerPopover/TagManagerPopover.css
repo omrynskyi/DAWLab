@@ -10,7 +10,6 @@
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   animation: tmp-fadein 0.12s ease;
 }
 

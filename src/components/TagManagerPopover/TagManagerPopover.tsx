@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { TagChip } from '@/components/ui/TagChip';
 import { TagInput } from '@/components/ui/TagInput';
+import type { TagSuggestion } from '@/lib/tags';
 import { X } from 'lucide-react';
 import './TagManagerPopover.css';
 
@@ -9,6 +10,7 @@ interface TagManagerPopoverProps {
   y: number;
   tags: string[];
   tagColors: Record<string, string>;
+  suggestions?: TagSuggestion[];
   onAddTag: (tag: string, color: string) => void;
   onRemoveTag: (tag: string) => void;
   onClose: () => void;
@@ -19,6 +21,7 @@ export const TagManagerPopover: React.FC<TagManagerPopoverProps> = ({
   y,
   tags,
   tagColors,
+  suggestions = [],
   onAddTag,
   onRemoveTag,
   onClose,
@@ -47,9 +50,10 @@ export const TagManagerPopover: React.FC<TagManagerPopoverProps> = ({
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Clamp position to viewport
+  // Clamp position to viewport. Reserve extra height so the suggestions
+  // dropdown (which opens below the input) has room instead of running off-screen.
   const POPOVER_WIDTH = 260;
-  const POPOVER_HEIGHT = 220; // approximate
+  const POPOVER_HEIGHT = 460; // popover + open suggestions dropdown
   const left = Math.min(x, window.innerWidth - POPOVER_WIDTH - 12);
   const top = Math.min(y, window.innerHeight - POPOVER_HEIGHT - 12);
 
@@ -90,6 +94,8 @@ export const TagManagerPopover: React.FC<TagManagerPopoverProps> = ({
           onAddTag={(tag, color) => onAddTag(tag, color)}
           placeholder="Add tag..."
           disabled={false}
+          suggestions={suggestions}
+          appliedTags={tags}
         />
       </div>
     </div>
