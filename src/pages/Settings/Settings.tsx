@@ -3,9 +3,19 @@ import { motion } from 'motion/react';
 import { useUsername } from '../../hooks/useUsername';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, HardDrive, RefreshCw, ArrowLeft, FolderGit2, UserPlus, RotateCcw, ChevronDown, Trash2 } from 'lucide-react';
+import { Check, X, HardDrive, RefreshCw, ArrowLeft, FolderGit2, FolderPlus, FolderSearch, Loader2, UserPlus, RotateCcw, ChevronDown, Trash2 } from 'lucide-react';
 import { validateUsername, sanitizeUsername } from '../../utils/usernameUtils';
 import './Settings.css';
+
+// A folder DAWLab re-scans for new projects (mirrors the main-process shape).
+interface WatchedDir {
+  path: string;
+  source: 'onboarding' | 'project' | 'manual';
+  addedAt: string;
+}
+
+// Session key used to hand fresh scan results to the Library banner on navigation.
+const FOUND_PROJECTS_HANDOFF_KEY = 'dawlab-found-projects-handoff';
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
@@ -13,6 +23,13 @@ const formatBytes = (bytes: number): string => {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const shortenPath = (p: string): string => {
+  if (!p) return '';
+  const parts = p.split(/[\\/]/).filter(Boolean);
+  if (parts.length <= 3) return p;
+  return `…/${parts.slice(-3).join('/')}`;
 };
 
 export const Settings: React.FC = () => {
@@ -43,6 +60,10 @@ export const Settings: React.FC = () => {
   // Default storage location for newly created projects
   const [defaultStorageMode, setDefaultStorageMode] = useState<'home' | 'project'>('home');
   const [isSavingStorageMode, setIsSavingStorageMode] = useState(false);
+
+  // Watched folders — where DAWLab looks for newly-created projects
+  const [watchedDirs, setWatchedDirs] = useState<WatchedDir[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   const loadUsers = async (activeUser: string | null) => {
     try {
@@ -197,9 +218,58 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const loadWatchedDirs = async () => {
+    try {
+      const dirs: WatchedDir[] = await window.ipcRenderer.invoke('get-watched-directories');
+      setWatchedDirs(dirs || []);
+    } catch (err) {
+      console.error('Error loading watched directories:', err);
+    }
+  };
+
+  const addWatchedDir = async () => {
+    try {
+      const dirs: WatchedDir[] = await window.ipcRenderer.invoke('add-watched-directory');
+      setWatchedDirs(dirs || []);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message ?? 'Failed to add folder' });
+    }
+  };
+
+  const removeWatchedDir = async (path: string) => {
+    try {
+      const dirs: WatchedDir[] = await window.ipcRenderer.invoke('remove-watched-directory', path);
+      setWatchedDirs(dirs || []);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message ?? 'Failed to remove folder' });
+    }
+  };
+
+  // Scan the watched folders now. If new projects turn up, hand them to the
+  // Library and jump there so its banner surfaces them; otherwise report inline.
+  const runScanNow = async () => {
+    setIsScanning(true);
+    try {
+      const found = await window.ipcRenderer.invoke('scan-watched-for-new-projects');
+      const count = Array.isArray(found) ? found.length : 0;
+      if (count > 0) {
+        sessionStorage.setItem(FOUND_PROJECTS_HANDOFF_KEY, JSON.stringify(found));
+        navigate('/');
+      } else {
+        setMessage({ type: 'success', text: 'No new projects found' });
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message ?? 'Scan failed' });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   React.useEffect(() => {
     if (username) fetchCasUsage();
     fetchDefaultStorageMode();
+    loadWatchedDirs();
     loadUsers(username);
   }, [username]);
 
@@ -441,6 +511,50 @@ export const Settings: React.FC = () => {
                 ? <>History lives inside each project folder, right next to your DAW files — if you delete the project, you delete its whole history too.</>
                 : <>History is kept separately in your home library, so deleting a project folder elsewhere won't affect its history.</>}
               {' '}You can override this per-project when creating a new project.
+            </p>
+          </div>
+        </div>
+
+        {/* Watched Folders Section */}
+        <div className="form-field">
+          <label className="form-field-label">Watched Folders</label>
+          <div className="form-field-content">
+            {watchedDirs.length === 0 ? (
+              <p className="watched-empty">
+                No folders yet. DAWLab remembers where you save projects, or add one below.
+              </p>
+            ) : (
+              <ul className="watched-list">
+                {watchedDirs.map((d) => (
+                  <li key={d.path} className="watched-row">
+                    <FolderSearch size={15} className="watched-row__icon" />
+                    <span className="watched-row__path" title={d.path}>
+                      {shortenPath(d.path)}
+                    </span>
+                    <button
+                      className="watched-row__remove"
+                      onClick={() => removeWatchedDir(d.path)}
+                      title="Remove folder"
+                      aria-label="Remove folder"
+                    >
+                      <X size={15} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="watched-actions">
+              <button className="watched-add-btn" onClick={addWatchedDir}>
+                <FolderPlus size={15} /> Add folder
+              </button>
+              <button className="watched-scan-btn" onClick={runScanNow} disabled={isScanning}>
+                {isScanning ? <Loader2 size={15} className="spin" /> : <RefreshCw size={15} />}
+                Scan now
+              </button>
+            </div>
+            <p className="field-hint">
+              DAWLab checks these folders on launch for newly-created projects and offers to add
+              them. Nothing is added automatically.
             </p>
           </div>
         </div>

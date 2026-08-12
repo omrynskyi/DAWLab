@@ -33,6 +33,19 @@
   dmg: {
     sign: false, // Do not sign the DMG
     writeUpdateInfo: false,
+    title: "${productName} ${version}",
+    background: "src/assets/icons/dmg-background.tiff", // Retina 1x/2x packed TIFF (540x380 @1x)
+    icon: "src/assets/icons/logo.icns", // mounted volume icon
+    iconSize: 90,
+    window: {
+      width: 540,
+      height: 380,
+    },
+    contents: [
+      // x/y are icon CENTERS in the 540x380 window space; tuned to the drawn tiles
+      { x: 128, y: 249, type: "file" }, // DAWLab app — left tile
+      { x: 404, y: 245, type: "link", path: "/Applications" }, // right tile
+    ],
   },
   win: {
     target: [

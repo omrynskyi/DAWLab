@@ -4,9 +4,8 @@ import path from 'path'
 import realOs from 'os'
 
 // Redirect ~/.dawlab to an isolated temp dir so these tests never touch the real
-// home directory. constants.ts (which config.ts uses to resolve the user dir)
-// computes VCS_DIR from os.homedir() at import time, so the mock must be in place
-// before the modules are (dynamically) imported.
+// home directory. constants.ts computes VCS_DIR from os.homedir() at import time,
+// so the mock must be in place before it is (dynamically) imported.
 const tmpHome = fs.mkdtempSync(path.join(realOs.tmpdir(), 'dawlab-config-'))
 
 vi.mock('os', async (importOriginal) => {
@@ -20,20 +19,8 @@ async function freshConfig() {
   return await import('../config')
 }
 
-const USER = 'audio_tester'
-
-function makeAudio(overrides: Partial<import('../config').AudioItem> = {}): import('../config').AudioItem {
-  return {
-    id: `audio-${Math.random().toString(36).slice(2, 8)}`,
-    name: 'My Bounce',
-    fileName: 'My Bounce.wav',
-    filePath: '/tmp/media/x/My Bounce.wav',
-    ext: '.wav',
-    folderId: null,
-    position: 0,
-    addedAt: new Date().toISOString(),
-    ...overrides,
-  }
+function configFile(username: string): string {
+  return path.join(tmpHome, '.dawlab', 'users', username, 'config.json')
 }
 
 beforeEach(() => {
@@ -45,78 +32,87 @@ afterEach(() => {
   fs.mkdirSync(tmpHome, { recursive: true })
 })
 
-describe('UserConfigManager audio items', () => {
-  it('adds an audio item and persists it to disk', async () => {
+describe('UserConfigManager — watched directories', () => {
+  it('adds a watched directory with a resolved path, source, and timestamp', async () => {
     const { UserConfigManager } = await freshConfig()
-    const manager = new UserConfigManager(USER)
-    const item = makeAudio({ id: 'audio-1' })
+    const m = new UserConfigManager('tester')
 
-    manager.addAudioItem(item)
-    expect(manager.getAudioItems()).toHaveLength(1)
+    const list = m.addWatchedDirectory('/music/Beats', 'onboarding')
 
-    // A fresh instance loads from the persisted config.json.
-    const reloaded = new UserConfigManager(USER)
-    expect(reloaded.getAudioItems()).toEqual([item])
+    expect(list).toHaveLength(1)
+    expect(list[0].path).toBe(path.resolve('/music/Beats'))
+    expect(list[0].source).toBe('onboarding')
+    expect(typeof list[0].addedAt).toBe('string')
+    expect(Number.isNaN(Date.parse(list[0].addedAt))).toBe(false)
   })
 
-  it('removes an audio item by id', async () => {
+  it('de-dupes by resolved path, keeping the first entry', async () => {
     const { UserConfigManager } = await freshConfig()
-    const manager = new UserConfigManager(USER)
-    manager.addAudioItem(makeAudio({ id: 'audio-1' }))
-    manager.addAudioItem(makeAudio({ id: 'audio-2' }))
+    const m = new UserConfigManager('tester')
 
-    expect(manager.removeAudioItem('audio-1')).toBe(true)
-    expect(manager.getAudioItems().map(a => a.id)).toEqual(['audio-2'])
-    expect(manager.removeAudioItem('nope')).toBe(false)
+    m.addWatchedDirectory('/music/beats', 'onboarding')
+    const list = m.addWatchedDirectory('/music/beats/', 'project') // trailing slash → same resolved path
+
+    expect(list).toHaveLength(1)
+    expect(list[0].source).toBe('onboarding')
   })
 
-  it('moves an audio item to a folder and back to root', async () => {
+  it('removes a watched directory by resolved path', async () => {
     const { UserConfigManager } = await freshConfig()
-    const manager = new UserConfigManager(USER)
-    manager.addAudioItem(makeAudio({ id: 'audio-1', folderId: null }))
+    const m = new UserConfigManager('tester')
+    m.addWatchedDirectory('/a', 'manual')
+    m.addWatchedDirectory('/b', 'manual')
 
-    expect(manager.moveAudioItem('audio-1', 'folder-9')).toBe(true)
-    expect(manager.getAudioItems()[0].folderId).toBe('folder-9')
+    const list = m.removeWatchedDirectory('/a/') // trailing slash still matches
 
-    expect(manager.moveAudioItem('audio-1', null)).toBe(true)
-    expect(manager.getAudioItems()[0].folderId).toBeNull()
-
-    expect(manager.moveAudioItem('missing', 'folder-9')).toBe(false)
+    expect(list.map((d) => d.path)).toEqual([path.resolve('/b')])
   })
 
-  it('renames an audio item', async () => {
+  it('persists watched directories across manager instances', async () => {
     const { UserConfigManager } = await freshConfig()
-    const manager = new UserConfigManager(USER)
-    manager.addAudioItem(makeAudio({ id: 'audio-1', name: 'Old' }))
+    new UserConfigManager('tester').addWatchedDirectory('/x', 'project')
 
-    expect(manager.renameAudioItem('audio-1', 'New Name')).toBe(true)
-    expect(manager.getAudioItems()[0].name).toBe('New Name')
-    expect(manager.renameAudioItem('missing', 'x')).toBe(false)
-  })
-
-  it('replaces all audio items via setAudioItems', async () => {
-    const { UserConfigManager } = await freshConfig()
-    const manager = new UserConfigManager(USER)
-    manager.addAudioItem(makeAudio({ id: 'audio-1' }))
-
-    const next = [makeAudio({ id: 'audio-2' }), makeAudio({ id: 'audio-3' })]
-    manager.setAudioItems(next)
-    expect(manager.getAudioItems().map(a => a.id)).toEqual(['audio-2', 'audio-3'])
+    const reloaded = new UserConfigManager('tester')
+    expect(reloaded.getWatchedDirectories().map((d) => d.path)).toEqual([path.resolve('/x')])
   })
 })
 
-describe('UserConfigManager deleteFolder reassigns audio items', () => {
-  it('moves audio items in a deleted folder back to root', async () => {
+describe('UserConfigManager — ignored project suggestions', () => {
+  it('adds and de-dupes ignored project paths', async () => {
     const { UserConfigManager } = await freshConfig()
-    const manager = new UserConfigManager(USER)
-    const folder = manager.createFolder('Refs')
-    manager.addAudioItem(makeAudio({ id: 'audio-1', folderId: folder.id }))
-    manager.addAudioItem(makeAudio({ id: 'audio-2', folderId: null }))
+    const m = new UserConfigManager('tester')
 
-    manager.deleteFolder(folder.id)
+    m.addIgnoredProjectPath('/proj/song')
+    m.addIgnoredProjectPath('/proj/song/') // duplicate after resolve
 
-    const byId = Object.fromEntries(manager.getAudioItems().map(a => [a.id, a.folderId]))
-    expect(byId['audio-1']).toBeNull()
-    expect(byId['audio-2']).toBeNull()
+    expect(m.getIgnoredProjectPaths()).toEqual([path.resolve('/proj/song')])
+  })
+
+  it('clears all ignored project paths', async () => {
+    const { UserConfigManager } = await freshConfig()
+    const m = new UserConfigManager('tester')
+    m.addIgnoredProjectPath('/proj/a')
+    m.addIgnoredProjectPath('/proj/b')
+
+    m.clearIgnoredProjectPaths()
+
+    expect(m.getIgnoredProjectPaths()).toEqual([])
+  })
+})
+
+describe('UserConfigManager — legacy config compatibility', () => {
+  it('defaults watched/ignored fields to empty for a config file that predates them', async () => {
+    const { UserConfigManager } = await freshConfig()
+    const file = configFile('legacy')
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(
+      file,
+      JSON.stringify({ folders: [], projectFolderMap: {}, audioItems: [] }),
+    )
+
+    const m = new UserConfigManager('legacy')
+
+    expect(m.getWatchedDirectories()).toEqual([])
+    expect(m.getIgnoredProjectPaths()).toEqual([])
   })
 })

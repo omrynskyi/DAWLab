@@ -33,6 +33,17 @@ export interface AudioItem {
   addedAt: string;
 }
 
+/**
+ * A folder DAWLab remembers and re-scans (on launch / on demand) for DAW projects
+ * the user hasn't imported yet. Sourced from the onboarding scan roots, the parent
+ * folder of each project the user adds, or an explicit choice in Settings.
+ */
+export interface WatchedDir {
+  path: string; // path.resolve(...)
+  source: 'onboarding' | 'project' | 'manual';
+  addedAt: string; // ISO timestamp
+}
+
 export interface UserConfigData {
   folders: Folder[];
   projectFolderMap: Record<string | number, string | null>;
@@ -41,6 +52,8 @@ export interface UserConfigData {
   casStorageLimit?: number | null; // CAS storage limit in bytes, null = unlimited
   casDirectory?: string; // Future: custom CAS directory path
   defaultStorageMode?: 'home' | 'project'; // Default storage location for newly created projects
+  watchedDirectories?: WatchedDir[]; // Folders re-scanned for newly-created projects
+  ignoredProjectPaths?: string[]; // Resolved project paths the user dismissed from suggestions
 }
 
 // ============================================
@@ -75,6 +88,8 @@ export class UserConfigManager {
         casStorageLimit: raw.casStorageLimit || null,
         casDirectory: raw.casDirectory || undefined,
         defaultStorageMode: raw.defaultStorageMode || undefined,
+        watchedDirectories: raw.watchedDirectories || [],
+        ignoredProjectPaths: raw.ignoredProjectPaths || [],
       };
     } catch (err) {
       console.error('[UserConfigManager] Error loading config:', err);
@@ -348,6 +363,62 @@ export class UserConfigManager {
   /** Set the default storage mode for newly created projects */
   setDefaultStorageMode(mode: 'home' | 'project'): void {
     this.data.defaultStorageMode = mode;
+    this.save();
+  }
+
+  // ---- Watched Directories (auto project detection) ----
+
+  /** Get the folders DAWLab re-scans for new projects. */
+  getWatchedDirectories(): WatchedDir[] {
+    return [...(this.data.watchedDirectories || [])];
+  }
+
+  /**
+   * Remember a folder to re-scan for new projects. Resolves the path and de-dupes
+   * by resolved path, so onboarding roots and project parents don't pile up.
+   * Returns the updated list.
+   */
+  addWatchedDirectory(dirPath: string, source: WatchedDir['source']): WatchedDir[] {
+    if (!this.data.watchedDirectories) this.data.watchedDirectories = [];
+    const resolved = path.resolve(dirPath);
+    if (!this.data.watchedDirectories.some(d => path.resolve(d.path) === resolved)) {
+      this.data.watchedDirectories.push({ path: resolved, source, addedAt: new Date().toISOString() });
+      this.save();
+    }
+    return this.getWatchedDirectories();
+  }
+
+  /** Forget a watched folder. Returns the updated list. */
+  removeWatchedDirectory(dirPath: string): WatchedDir[] {
+    if (!this.data.watchedDirectories) return [];
+    const resolved = path.resolve(dirPath);
+    this.data.watchedDirectories = this.data.watchedDirectories.filter(
+      d => path.resolve(d.path) !== resolved,
+    );
+    this.save();
+    return this.getWatchedDirectories();
+  }
+
+  // ---- Ignored Project Suggestions ----
+
+  /** Get resolved project paths the user has dismissed from suggestions. */
+  getIgnoredProjectPaths(): string[] {
+    return [...(this.data.ignoredProjectPaths || [])];
+  }
+
+  /** Dismiss a suggested project so it stops resurfacing. De-dupes by resolved path. */
+  addIgnoredProjectPath(projectPath: string): void {
+    if (!this.data.ignoredProjectPaths) this.data.ignoredProjectPaths = [];
+    const resolved = path.resolve(projectPath);
+    if (!this.data.ignoredProjectPaths.some(p => path.resolve(p) === resolved)) {
+      this.data.ignoredProjectPaths.push(resolved);
+      this.save();
+    }
+  }
+
+  /** Clear all dismissed suggestions so they can be offered again. */
+  clearIgnoredProjectPaths(): void {
+    this.data.ignoredProjectPaths = [];
     this.save();
   }
 }

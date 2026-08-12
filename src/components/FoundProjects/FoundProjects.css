@@ -1,0 +1,344 @@
+/* ── Banner ─────────────────────────────────────────────────────────────── */
+
+.found-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-top: 20px;
+  background-color: rgba(0, 122, 255, 0.06);
+  border: 1px solid rgba(0, 122, 255, 0.25);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  animation: found-banner-in 0.25s ease;
+}
+
+.found-banner:hover {
+  background-color: rgba(0, 122, 255, 0.12);
+  border-color: rgba(0, 122, 255, 0.4);
+}
+
+@keyframes found-banner-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.found-banner__icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background-color: rgba(0, 122, 255, 0.12);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4d9bff;
+}
+
+.found-banner__info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.found-banner__title {
+  font-size: 13.5px;
+  color: #ccc;
+  white-space: nowrap;
+}
+
+.found-banner__title strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.found-banner__sub {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.found-banner__review {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4d9bff;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+.found-banner__dismiss {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background-color 0.15s;
+  flex-shrink: 0;
+}
+
+.found-banner__dismiss:hover {
+  color: #ccc;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Review panel ───────────────────────────────────────────────────────── */
+
+.found-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  animation: found-overlay-in 0.15s ease;
+}
+
+@keyframes found-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.found-panel {
+  width: min(560px, calc(100vw - 48px));
+  max-height: min(640px, calc(100vh - 80px));
+  display: flex;
+  flex-direction: column;
+  background-color: #161616;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  animation: found-panel-in 0.2s ease;
+}
+
+@keyframes found-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.found-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 10px;
+}
+
+.found-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.found-panel__title svg {
+  color: #4d9bff;
+}
+
+.found-panel__close {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.found-panel__close:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.found-panel__desc {
+  padding: 0 18px 12px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #888;
+}
+
+.found-panel__error {
+  margin: 0 18px 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: rgba(255, 69, 58, 0.1);
+  border: 1px solid rgba(255, 69, 58, 0.3);
+  color: #ff6b6b;
+  font-size: 12.5px;
+}
+
+.found-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.found-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 8px;
+  border-radius: 10px;
+  transition: background-color 0.12s;
+}
+
+.found-row:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.found-row__icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  background-color: #1e1e1e;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #888;
+}
+
+.found-row__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.found-row__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.found-row__name {
+  font-size: 13.5px;
+  color: #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.found-row__path {
+  font-size: 11.5px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.found-row__daw {
+  font-size: 11px;
+  color: #999;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 3px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.found-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.found-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 6px 11px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.found-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.found-btn--add {
+  background-color: rgba(0, 122, 255, 0.14);
+  border-color: rgba(0, 122, 255, 0.35);
+  color: #4d9bff;
+}
+
+.found-btn--add:not(:disabled):hover {
+  background-color: rgba(0, 122, 255, 0.24);
+  border-color: rgba(0, 122, 255, 0.55);
+}
+
+.found-btn--ignore {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #999;
+}
+
+.found-btn--ignore:not(:disabled):hover {
+  color: #ccc;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.found-panel__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}
+
+.found-btn--ghost {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #bbb;
+}
+
+.found-btn--ghost:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.found-btn--primary {
+  background-color: #007aff;
+  color: #fff;
+}
+
+.found-btn--primary:not(:disabled):hover {
+  background-color: #1a86ff;
+}
+
+.found-spin {
+  animation: found-spin 0.8s linear infinite;
+}
+
+@keyframes found-spin {
+  to { transform: rotate(360deg); }
+}

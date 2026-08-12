@@ -419,11 +419,26 @@ ipcMain.handle("get-default-scan-roots", () => {
   return getDefaultScanRoots();
 });
 
+// Remember a folder so it's re-scanned for new projects later. Never lets a
+// bookkeeping failure break the primary operation (scan / import) it rides on.
+function rememberWatchedDir(
+  dirPath: string,
+  source: "onboarding" | "project" | "manual",
+): void {
+  try {
+    getUserConfigManager(getUsername()).addWatchedDirectory(dirPath, source);
+  } catch (err) {
+    console.error("[main.ts] Failed to remember watched dir:", err);
+  }
+}
+
 // Recursively scan the given folders for DAW projects, streaming progress to
-// the calling renderer via the "scan-progress" push channel.
+// the calling renderer via the "scan-progress" push channel. The scanned roots
+// are remembered so newly-created projects in them can be surfaced later.
 ipcMain.handle(
   "scan-for-projects",
   async (event, roots: string[]) => {
+    for (const root of roots) rememberWatchedDir(root, "onboarding");
     return await scanForProjects(roots, {
       onProgress: (progress) => {
         if (!event.sender.isDestroyed()) {
@@ -437,7 +452,10 @@ ipcMain.handle(
 ipcMain.handle(
   "init-project",
   async (_ev, projectName: string, projectPath: string, opts: any) => {
-    return await initProject(projectName, projectPath, opts);
+    const res = await initProject(projectName, projectPath, opts);
+    // Watch the project's parent folder so sibling projects are found later.
+    rememberWatchedDir(path.dirname(projectPath), "project");
+    return res;
   },
 );
 
@@ -471,6 +489,8 @@ ipcMain.handle(
           projectId: res?.projectId,
           projectName: res?.projectName,
         });
+        // Watch each imported project's parent folder for future siblings.
+        rememberWatchedDir(path.dirname(entry.projectPath), "project");
       } catch (err) {
         results.push({
           projectPath: entry.projectPath,
@@ -482,6 +502,77 @@ ipcMain.handle(
     return results;
   },
 );
+
+// Re-scan the user's watched folders and return only projects that are new
+// (not yet imported) and not previously dismissed. Runs silently — no progress
+// stream — so it can fire quietly on launch. Used by the Library banner and the
+// Settings "Scan now" button.
+ipcMain.handle("scan-watched-for-new-projects", async () => {
+  try {
+    const manager = getUserConfigManager(getUsername());
+    const dirs = manager.getWatchedDirectories().map((d) => d.path);
+    if (dirs.length === 0) return [];
+    const found = await scanForProjects(dirs);
+    const ignored = new Set(manager.getIgnoredProjectPaths());
+    return found.filter((p) => !p.alreadyImported && !ignored.has(p.path));
+  } catch (err) {
+    console.error("[main.ts] Error scanning watched dirs:", err);
+    return [];
+  }
+});
+
+// Dismiss a suggested project so it stops resurfacing on future scans.
+ipcMain.handle("ignore-found-project", async (_ev, projectPath: string) => {
+  try {
+    getUserConfigManager(getUsername()).addIgnoredProjectPath(projectPath);
+    return { success: true };
+  } catch (err: any) {
+    console.error("[main.ts] Error ignoring found project:", err);
+    throw err;
+  }
+});
+
+// ---- Watched folders (viewable/editable in Settings) ----
+
+ipcMain.handle("get-watched-directories", async () => {
+  try {
+    return getUserConfigManager(getUsername()).getWatchedDirectories();
+  } catch (err: any) {
+    console.error("[main.ts] Error getting watched directories:", err);
+    return [];
+  }
+});
+
+// Opens a folder picker and adds the chosen folder to the watched list.
+// Returns the updated list (unchanged if the picker was cancelled).
+ipcMain.handle("add-watched-directory", async () => {
+  const manager = getUserConfigManager(getUsername());
+  const result = await dialog.showOpenDialog(win!, {
+    properties: ["openDirectory"],
+  });
+  const folder = result.filePaths[0];
+  if (!folder) return manager.getWatchedDirectories();
+  return manager.addWatchedDirectory(folder, "manual");
+});
+
+ipcMain.handle("remove-watched-directory", async (_ev, dirPath: string) => {
+  try {
+    return getUserConfigManager(getUsername()).removeWatchedDirectory(dirPath);
+  } catch (err: any) {
+    console.error("[main.ts] Error removing watched directory:", err);
+    throw err;
+  }
+});
+
+ipcMain.handle("clear-ignored-project-paths", async () => {
+  try {
+    getUserConfigManager(getUsername()).clearIgnoredProjectPaths();
+    return { success: true };
+  } catch (err: any) {
+    console.error("[main.ts] Error clearing ignored project paths:", err);
+    throw err;
+  }
+});
 
 ipcMain.handle(
   "commit-project",

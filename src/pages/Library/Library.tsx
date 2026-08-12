@@ -33,6 +33,17 @@ import { buildTagSuggestions } from '@/lib/tags';
 import { useLibraryPreview } from '@/hooks/useLibraryPreview';
 import { FolderPeek } from '@/components/FolderPeek';
 import { DitherGradient, EMPTY_LIBRARY_DITHER } from '@/components/ui/DitherGradient';
+import { FoundProjectsBanner, FoundProjectsPanel } from '@/components/FoundProjects';
+import type { FoundProject } from '@/components/FoundProjects';
+
+// Runs the watched-folder scan for new projects at most once per app session, so
+// navigating away from the Library and back doesn't re-walk the disk each time.
+// The Settings "Scan now" button bypasses this via a sessionStorage handoff.
+let ranAutoScanThisSession = false;
+
+// sessionStorage key the Settings "Scan now" button uses to hand fresh scan
+// results to the Library so its banner shows them immediately on navigation.
+const FOUND_PROJECTS_HANDOFF_KEY = 'dawlab-found-projects-handoff';
 
 // Maps the DAW label returned by the main-process `detect-daw` handler to the
 // DAW id the NewProject form uses to prefill its walkthrough/selection.
@@ -155,6 +166,16 @@ export const Library: React.FC = () => {
     setRecentlySavedDismissed(false);
   }, [recentlySavedProject?.id, recentlySavedProject?.latestModTime]);
 
+  // Newly-detected projects in watched folders that aren't imported yet.
+  const [foundProjects, setFoundProjects] = useState<FoundProject[]>([]);
+  const [showFoundPanel, setShowFoundPanel] = useState(false);
+  const [foundDismissed, setFoundDismissed] = useState(false);
+
+  // Close the review panel once every found project has been added or ignored.
+  useEffect(() => {
+    if (foundProjects.length === 0) setShowFoundPanel(false);
+  }, [foundProjects.length]);
+
   const HANDLED_MOD_TIMES_KEY = 'dawlab-handled-mod-times';
   const [handledModTimes, setHandledModTimes] = useState<Map<string, string>>(() => {
     const stored = localStorage.getItem(HANDLED_MOD_TIMES_KEY);
@@ -257,9 +278,40 @@ export const Library: React.FC = () => {
       await loadMyProjects();
       setLoading(false);
       checkRecentlySaved();
+      detectNewProjects();
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Surface projects created in watched folders since the last check. Prefers
+  // results handed over by the Settings "Scan now" button; otherwise runs the
+  // background scan once per session. Never blocks the Library render.
+  const detectNewProjects = useCallback(() => {
+    const handoff = sessionStorage.getItem(FOUND_PROJECTS_HANDOFF_KEY);
+    if (handoff) {
+      sessionStorage.removeItem(FOUND_PROJECTS_HANDOFF_KEY);
+      ranAutoScanThisSession = true;
+      try {
+        const parsed: FoundProject[] = JSON.parse(handoff);
+        setFoundProjects(parsed);
+        setFoundDismissed(false);
+      } catch {
+        /* malformed handoff — ignore */
+      }
+      return;
+    }
+    if (ranAutoScanThisSession) return;
+    ranAutoScanThisSession = true;
+    window.ipcRenderer
+      .invoke('scan-watched-for-new-projects')
+      .then((res: FoundProject[]) => setFoundProjects(res || []))
+      .catch(() => {});
+  }, []);
+
+  // Remove one found project from the banner/panel (after Add or Ignore).
+  const removeFoundProject = useCallback((projectPath: string) => {
+    setFoundProjects((prev) => prev.filter((p) => p.path !== projectPath));
   }, []);
 
   // Recently Saved Check
@@ -1185,6 +1237,15 @@ export const Library: React.FC = () => {
           </div>
         )}
 
+        {/* New Projects Found Notification */}
+        {foundProjects.length > 0 && !currentFolderId && !foundDismissed && (
+          <FoundProjectsBanner
+            count={foundProjects.length}
+            onReview={() => setShowFoundPanel(true)}
+            onDismiss={() => setFoundDismissed(true)}
+          />
+        )}
+
         {/* Content Grid/List */}
         <section className="content-grid-wrapper">
           {/* Active filter chips — visible on the page, not just in the popup */}
@@ -1696,13 +1757,16 @@ export const Library: React.FC = () => {
         initialDaw={dropInit?.daw}
         onClose={() => { setShowNewProjectModal(false); setDropInit(null); }}
         onSuccess={(projectId?: string) => {
-          const droppedInto = dropInit?.folderId ?? null;
+          // A project created while browsing inside a folder should land in that
+          // folder. Drops capture their own target (dropInit.folderId); the
+          // New Project button/menu/empty-state flows fall back to the folder the
+          // library is currently showing.
+          const targetFolderId = dropInit?.folderId ?? currentFolderId;
           setShowNewProjectModal(false);
           setDropInit(null);
-          // A project dropped inside a folder should land in that folder.
-          if (droppedInto && projectId) {
+          if (targetFolderId && projectId) {
             window.ipcRenderer
-              .invoke('move-project-to-folder', projectId, droppedInto)
+              .invoke('move-project-to-folder', projectId, targetFolderId)
               .catch(() => {})
               .finally(() => loadMyProjects());
           } else {
@@ -1710,6 +1774,16 @@ export const Library: React.FC = () => {
           }
         }}
       />
+
+      {/* New Projects Found — review panel */}
+      {showFoundPanel && (
+        <FoundProjectsPanel
+          projects={foundProjects}
+          onClose={() => setShowFoundPanel(false)}
+          onRemove={removeFoundProject}
+          onAdded={loadMyProjects}
+        />
+      )}
 
       {/* New Folder Modal */}
       <InputModal
