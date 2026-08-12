@@ -1,0 +1,268 @@
+/* Collapsed Tab - bottom right corner */
+/* Only apply fixed positioning when NOT embedded */
+.activity-collapsed-tab:not(.embedded) {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+}
+
+.activity-tab-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--background);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.activity-tab-button:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-main);
+    border-color: var(--border-card-selected);
+}
+
+.activity-collapsed-tab.embedded .activity-tab-button {
+    /* Match TransferStatus bar style */
+    background: var(--background);
+    border: 1px solid #3A3A3A;
+    color: #9CA3AF;
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: none;
+    font-size: 12px;
+}
+
+.activity-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--color-info);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 10px;
+}
+
+.activity-tab-chevron {
+    opacity: 0.6;
+}
+
+/* Floating Container */
+/* Only fixed positioning when NOT embedded */
+.activity-floating-container:not(.embedded) {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+/* Embedded container */
+.activity-floating-container.embedded {
+    position: relative; /* Context for absolute children */
+    display: flex;
+    flex-direction: column-reverse; /* Stack upwards */
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.activity-floating-container.embedded .activity-collapse-btn {
+    display: none; /* Hide collapse text button in embedded mode */
+}
+
+/* Stacked cards container */
+.activity-cards-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px; 
+}
+
+/* Embedded cards stack - positioned absolutely above the trigger */
+.activity-floating-container.embedded .activity-cards-stack {
+    position: absolute;
+    bottom: 100%; /* Above the trigger */
+    right: 0;
+    margin-bottom: 20px; /* Spacing */
+    pointer-events: none; /* Let clicks pass through empty space */
+    z-index: 2000;
+    align-items: flex-end; /* Align cards to the right */
+}
+
+/* Make sure cards themselves capture events */
+.activity-floating-container.embedded .activity-cards-stack > * {
+    pointer-events: auto;
+}
+
+
+/* Individual invitation notification */
+.invitation-notification {
+    background: var(--background);
+    backdrop-filter: blur(12px);
+    border-radius: 16px; /* Increased radius */
+    border: 1px solid var(--border-card);
+    padding: 24px 28px; /* Increased padding */
+    width: 90vw;
+    max-width: 520px; /* Increased max width */
+    min-width: 320px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.invitation-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px; /* Increased gap */
+}
+
+/* Left side - info */
+.invitation-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.invitation-label {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* Increased gap */
+    margin-bottom: 6px; /* Increased margin */
+}
+
+.invitation-label .text-muted {
+    color: var(--text-muted);
+    font-size: 13px; /* Larger font */
+    font-weight: 400;
+}
+
+.inviter-name {
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 600; 
+}
+
+.project-title {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Increased gap */
+    color: var(--text-main);
+    font-size: 18px; /* Larger font */
+    font-weight: 600; /* Bolder */
+    white-space: nowrap;
+    overflow: hidden;
+    /* text-overflow removed from container so tags wrap with ellipsis on child */
+    margin-bottom: 6px;
+}
+
+/* Helper for project name truncation */
+.project-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.role-tag {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    height: 22px; /* Fixed height alignment */
+}
+
+.role-tag.role-admin {
+    background: rgba(234, 179, 8, 0.15); /* warning color */
+    color: var(--color-warning);
+}
+
+.role-tag.role-collaborator {
+    background: rgba(59, 130, 246, 0.15); /* info color */
+    color: var(--color-info);
+}
+
+.role-tag.role-viewer {
+    background: rgba(107, 114, 128, 0.15);
+    color: var(--text-muted);
+}
+
+.expires-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 6px;
+    font-weight: 400;
+}
+
+/* Right side - action buttons */
+.invitation-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* Increased gap */
+    flex-shrink: 0;
+}
+
+
+/* Embedded Styles specific overrides */
+.activity-collapsed-tab.embedded {
+    position: relative; /* Reset fixed */
+    bottom: auto;
+    right: auto;
+    z-index: auto;
+}
+
+.activity-collapsed-tab.embedded .activity-tab-button {
+    /* Match TransferStatus bar style */
+    background: var(--background);
+    border: 1px solid #3A3A3A;
+    color: #9CA3AF;
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: none;
+    font-size: 12px;
+}
+
+.activity-collapsed-tab.embedded .activity-tab-button:hover {
+    background: #333333;
+    border-color: #4A4A4A;
+    color: #E5E5E5;
+}
+
+.activity-collapsed-tab.embedded .activity-badge {
+    background: #3B82F6; /* Match transfer status accent */
+    font-size: 10px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    padding: 0 5px;
+}

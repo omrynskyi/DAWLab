@@ -1,0 +1,297 @@
+/* Change Project Path Modal */
+.change-path-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.change-path-modal-container {
+  width: 100%;
+  max-width: 600px;
+  background: #1E1E1E;
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  position: relative;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Close Button */
+.change-path-modal-container .close-button {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.change-path-modal-container .close-dot {
+  width: 16px;
+  height: 16px;
+  background: #FF5F57;
+  border-radius: 50%;
+  transition: opacity 0.2s;
+}
+
+.change-path-modal-container .close-button:hover .close-dot {
+  opacity: 0.8;
+}
+
+/* Title */
+.change-path-modal-title {
+  color: #E5E5E5;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+}
+
+/* Warning Box */
+.change-path-warning {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.change-path-warning svg {
+  flex-shrink: 0;
+  color: #fbbf24;
+  margin-top: 0.1rem;
+}
+
+.change-path-warning p {
+  color: #E5E5E5;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Section */
+.change-path-section {
+  margin-bottom: 1.5rem;
+}
+
+.change-path-label {
+  display: block;
+  color: #E5E5E5;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+/* Path Display */
+.change-path-display {
+  padding: 1rem 1.5rem;
+  background: #2A2A2A;
+  border-radius: 12px;
+  color: #8B8B8B;
+  font-size: 0.9rem;
+  font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* Browse Button */
+.change-path-browse-button {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: #007AFF;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.change-path-browse-button:hover:not(:disabled) {
+  background: #0051D5;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.change-path-browse-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.change-path-browse-button span {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Existing Project Warning */
+.change-path-existing-warning {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.change-path-existing-warning svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.change-path-existing-content {
+  flex: 1;
+}
+
+.change-path-existing-content p {
+  color: #E5E5E5;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 1rem 0;
+}
+
+.change-path-existing-content strong {
+  color: #ef4444;
+}
+
+/* Custom Checkbox */
+.change-path-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  color: #E5E5E5;
+  font-size: 0.875rem;
+}
+
+.change-path-custom-checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 2px solid #6B6B6B;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.change-path-custom-checkbox.checked {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.change-path-custom-checkbox svg {
+  color: white;
+}
+
+/* Error Message */
+.change-path-error {
+  padding: 1rem;
+  background: rgba(255, 95, 87, 0.1);
+  border: 1px solid rgba(255, 95, 87, 0.3);
+  border-radius: 8px;
+  color: #FF5F57;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Actions */
+.change-path-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1.5rem;
+  border-top: 1px solid #2A2A2A;
+}
+
+.change-path-button {
+  padding: 0.85rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.change-path-button.secondary {
+  background: #2A2A2A;
+  color: #E5E5E5;
+}
+
+.change-path-button.secondary:hover {
+  background: #323232;
+}
+
+.change-path-button.primary {
+  background: #007AFF;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.change-path-button.primary:hover:not(:disabled) {
+  background: #0051D5;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.change-path-button.primary:disabled {
+  background: #555555;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.change-path-button:active {
+  transform: translateY(0);
+}

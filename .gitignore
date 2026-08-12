@@ -1,0 +1,32 @@
+node_modules/
+dist/
+dist-electron/
+*.log
+.playwright-mcp/
+main.js
+preload.mjs
+# Environment variables
+.env*
+.env.local
+.env*.local
+playwright-report/
+test-results/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+coverage/
+# Build output
+out/
+build/
+dist-electron/
+release/
+
+
+dist-electron/main.js

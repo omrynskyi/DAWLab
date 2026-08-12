@@ -1,0 +1,136 @@
+.folder-peek {
+  position: fixed;
+  z-index: 1200;
+  width: 320px;
+  max-width: 92vw;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(24, 24, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  animation: folder-peek-in 0.16s ease-out;
+  transform-origin: center;
+}
+
+@keyframes folder-peek-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.folder-peek-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.folder-peek-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-peek-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #007AFF);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s, filter 0.15s;
+}
+
+.folder-peek-open:hover {
+  filter: brightness(1.12);
+}
+
+.folder-peek-open:active {
+  filter: brightness(0.95);
+}
+
+.folder-peek-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.folder-peek-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.folder-peek-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.folder-peek-item-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.folder-peek-item-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.folder-peek-item-subfolder {
+  color: #cfe6ff;
+}
+
+.folder-peek-item-name {
+  font-size: 11px;
+  color: #bbb;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-peek-more .folder-peek-item-icon {
+  color: #cfe6ff;
+}
+
+.folder-peek-empty {
+  padding: 24px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}

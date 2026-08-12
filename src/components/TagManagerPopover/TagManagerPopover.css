@@ -1,0 +1,82 @@
+.tag-manager-popover {
+  position: fixed;
+  z-index: 1100;
+  width: 260px;
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: tmp-fadein 0.12s ease;
+}
+
+@keyframes tmp-fadein {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+.tmp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tmp-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e5e5;
+  letter-spacing: 0.01em;
+}
+
+.tmp-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tmp-close:hover {
+  color: #e5e5e5;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tmp-body {
+  padding: 10px 14px;
+  min-height: 44px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.tmp-empty {
+  font-size: 12px;
+  color: #555;
+  font-style: italic;
+  align-self: center;
+}
+
+.tmp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tmp-footer {
+  padding: 8px 14px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Make TagInput fill the full width inside the popover */
+.tmp-footer .tag-input-container {
+  width: 100%;
+}

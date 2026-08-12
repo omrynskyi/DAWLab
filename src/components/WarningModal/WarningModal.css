@@ -1,0 +1,203 @@
+.warning-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    z-index: 9999;
+    animation: warningFadeIn 0.2s ease-out;
+}
+
+@keyframes warningFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.warning-modal-container {
+    width: 100%;
+    max-width: 500px;
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    position: relative;
+    animation: warningSlideUp 0.3s ease-out;
+}
+
+@keyframes warningSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Close Button */
+.warning-modal-container .close-button {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.warning-modal-container .close-dot {
+    width: 16px;
+    height: 16px;
+    background: #FF5F57;
+    border-radius: 50%;
+    transition: opacity 0.2s;
+}
+
+.warning-modal-container .close-button:hover .close-dot {
+    opacity: 0.8;
+}
+
+/* Title */
+.warning-modal-title {
+    color: var(--text-main);
+    font-size: 1.4rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0 0 1.5rem 0;
+}
+
+/* Message */
+.warning-modal-message {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    text-align: center;
+    margin: 0 0 1.5rem 0;
+}
+
+.warning-modal-message p {
+    margin: 0;
+}
+
+/* Checkbox - Reuse existing styles */
+.warning-modal-container .dont-ask-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    user-select: none;
+}
+
+.warning-modal-container .dont-ask-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-info);
+    cursor: pointer;
+}
+
+.warning-modal-container .dont-ask-checkbox span {
+    transition: color 0.2s;
+}
+
+.warning-modal-container .dont-ask-checkbox:hover span {
+    color: #B0B0B0;
+}
+
+/* Action Buttons */
+.warning-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.warning-modal-container .action-btn {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.warning-modal-container .cancel-btn {
+    background: var(--bg-card-hover);
+    color: var(--text-secondary);
+}
+
+.warning-modal-container .cancel-btn:hover {
+    background: #424242;
+    color: #E5E5E5;
+}
+
+.warning-modal-container .warning-btn {
+    background: var(--color-warning);
+    color: #1a1a1a;
+    box-shadow: 0 4px 12px rgba(212, 165, 23, 0.3);
+}
+
+.warning-modal-container .warning-btn:hover {
+    background: #E5B61D;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(212, 165, 23, 0.4);
+}
+
+.warning-modal-container .primary-btn {
+    background: var(--color-info);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.warning-modal-container .primary-btn:hover {
+    background: #0051D5;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.warning-modal-container .destructive-btn {
+    background: var(--color-error);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.warning-modal-container .destructive-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+    .warning-modal-container {
+        padding: 2rem 1.5rem;
+    }
+
+    .warning-modal-actions {
+        flex-direction: column;
+    }
+
+    .warning-modal-container .action-btn {
+        width: 100%;
+    }
+}

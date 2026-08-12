@@ -1,0 +1,87 @@
+/* TagInput Component Styles */
+
+.tag-input-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.tag-input-color-btn {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.tag-input-color-btn:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: scale(1.1);
+}
+
+.tag-input-color-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tag-input-palette-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.tag-input-field {
+  flex: 1;
+  min-width: 90px;
+  max-width: 150px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e5e7eb;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.tag-input-field::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tag-input-field:focus {
+  border-color: rgba(0, 123, 255, 0.5);
+  background: rgba(0, 123, 255, 0.1);
+}
+
+.tag-input-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: 1px solid rgba(0, 123, 255, 0.5);
+  border-radius: 8px;
+  background: rgba(0, 123, 255, 0.15);
+  color: #7cc4ff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tag-input-button:hover:not(:disabled) {
+  background: rgba(0, 123, 255, 0.3);
+  border-color: rgba(0, 123, 255, 0.8);
+}
+
+.tag-input-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

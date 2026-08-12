@@ -1,0 +1,208 @@
+.plugin-section {
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 80px;
+}
+
+.plugin-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.plugin-section-title {
+  font-size: 1.2rem;
+  font-weight: 550;
+  color: var(--text-main);
+  margin-bottom: 0;
+}
+
+.plugin-missing-badge {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-error);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.plugin-container {
+  flex: 1;
+  min-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 0.75rem;
+  scrollbar-width: none;
+}
+
+.plugin-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.plugin-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.plugin-container::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.plugin-container::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Plugin Groups */
+.plugin-group {
+  margin-bottom: 0.75rem;
+}
+
+.plugin-group:last-child {
+  margin-bottom: 0;
+}
+
+.plugin-group-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Plugin Row — grid for consistent column alignment */
+.plugin-row {
+  display: grid;
+  /* icon | name+manufacturer | action button | type badge */
+  grid-template-columns: 20px 1fr 90px auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.plugin-row:hover {
+  background-color: var(--bg-card-hover);
+}
+
+/* Missing plugins wrapper — single red border around all missing */
+.plugin-missing-group {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background-color: rgba(239, 68, 68, 0.04);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+
+.plugin-missing-group .plugin-row {
+  border-radius: 0;
+}
+
+.plugin-row-missing:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Status Icon */
+.plugin-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.plugin-status-icon.installed {
+  color: var(--color-success);
+}
+
+.plugin-status-icon.missing {
+  color: var(--color-error);
+}
+
+/* Name group — name and manufacturer sit inline */
+.plugin-name-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
+/* Plugin Name */
+.plugin-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+/* Manufacturer — shown inline next to the name, muted */
+.plugin-manufacturer {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
+/* Type Badge */
+.plugin-type-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  min-width: 44px;
+  text-align: center;
+}
+
+/* Get Plugin Button */
+.plugin-get-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.plugin-get-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+/* Empty & Loading states */
+.plugin-loading,
+.plugin-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
+}

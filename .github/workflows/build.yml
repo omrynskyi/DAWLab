@@ -1,0 +1,120 @@
+name: Build Electron App
+
+on:
+  # Manual trigger for testing
+  workflow_dispatch:
+
+  # Trigger on version tags
+  push:
+    tags:
+      - "v*"
+
+  # Optional: trigger on main branch pushes
+  # push:
+  #   branches: [main]
+
+permissions:
+  contents: write # Required for creating releases
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    # Linux is the newest target — don't let it block the macOS/Windows release
+    continue-on-error: ${{ matrix.os == 'linux' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS builds (both architectures built on macOS runner)
+          - os: macos
+            runner: macos-latest
+            arch: x64
+          - os: macos
+            runner: macos-latest
+            arch: arm64
+
+          # Windows builds (both architectures built on Windows runner)
+          - os: windows
+            runner: windows-latest
+            arch: x64
+          - os: windows
+            runner: windows-latest
+            arch: arm64
+
+          # Linux build (AppImage, x64)
+          - os: linux
+            runner: ubuntu-latest
+            arch: x64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build App UI
+        run: npm run build:renderer
+
+      - name: Build Electron App (macOS)
+        if: matrix.os == 'macos'
+        run: npm run pack -- --mac --${{ matrix.arch }}
+        env:
+          EP_DRAFT: true
+
+      - name: Build Electron App (Windows)
+        if: matrix.os == 'windows'
+        run: npm run pack -- --win --${{ matrix.arch }}
+        env:
+          EP_DRAFT: true
+
+      - name: Build Electron App (Linux)
+        if: matrix.os == 'linux'
+        run: npm run pack -- --linux --${{ matrix.arch }}
+        env:
+          EP_DRAFT: true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAWLab-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            release/**/*-Installer.dmg
+            release/**/*-Setup.exe
+            release/**/*.AppImage
+          retention-days: 1
+          if-no-files-found: ignore
+
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/**/*-Installer.dmg
+            artifacts/**/*-Setup.exe
+            artifacts/**/*.AppImage
+          draft: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

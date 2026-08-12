@@ -1,0 +1,1380 @@
+/* Main Container */
+.library-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--background); /* Deep dark background */
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.library-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+.library-header {
+  /* Sits above the content so its dropdowns (which drop down into the
+     content area) stay interactive — not just visible. */
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 40px;
+  background-color: transparent;
+  flex-shrink: 0;
+}
+
+.header-left {
+  flex: 0 0 auto;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+}
+
+.header-left .app-logo {
+  height: 32px;
+  width: auto;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.tab-switch {
+  display: flex;
+  background-color: var(--background);
+  border-radius: 18px;
+  padding: 5px;
+  gap: 2px;
+  border: 1px solid #333;
+  height: 52px;
+  align-items: center;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  padding: 0 28px;
+  height: 42px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-btn:hover {
+  color: #999;
+}
+
+.tab-btn.active {
+  background-color: #1F1F1F;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 160px;
+  justify-content: flex-end;
+}
+
+.view-toggle {
+  display: flex;
+  background-color: #1C1C1C;
+  border-radius: 15px;
+  padding: 3px;
+  border: 1px solid transparent;
+  margin-right: 8px;
+  height: 48px;
+  align-items: center;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.toggle-btn:hover {
+  color: #999;
+}
+
+.toggle-btn.active {
+  color: #fff;
+  background-color: #252525;
+}
+
+.icon-btn {
+  background-color: #1C1C1C;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.icon-btn svg {
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background-color: #252525;
+  border-color: #4b5563;
+  color: #fff;
+}
+
+/* Expanding search */
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #1C1C1C;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  height: 48px;
+  width: 48px;
+  overflow: hidden;
+  transition: width 0.24s ease, border-color 0.2s, background-color 0.2s;
+}
+
+.search-wrapper.expanded {
+  width: 360px;
+  max-width: 46vw;
+  border-color: #4b5563;
+  background-color: #202020;
+}
+
+.search-wrapper .search-btn {
+  background: transparent;
+  border: none;
+}
+
+.search-wrapper .search-btn:hover {
+  background: transparent;
+  border: none;
+  color: #fff;
+}
+
+.search-wrapper .search-btn.active {
+  color: var(--accent-blue, #007AFF);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #eee;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.search-wrapper.expanded .search-input {
+  opacity: 1;
+  padding-right: 4px;
+}
+
+.search-input::placeholder {
+  color: #666;
+}
+
+.search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 48px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.search-clear:hover {
+  color: #fff;
+}
+
+/* Add Button Dropdown */
+.add-btn-wrapper {
+  position: relative;
+}
+
+.add-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 6px;
+  min-width: 180px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.add-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.add-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Content Area */
+.library-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 40px 100px 40px; /* Bottom padding for footer space */
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Recently Saved — compact top notification */
+.recently-saved-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-top: 20px;
+  background-color: rgba(0, 122, 255, 0.06);
+  border: 1px solid rgba(0, 122, 255, 0.25);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  animation: recent-toast-in 0.25s ease;
+}
+
+.recently-saved-toast:hover {
+  background-color: rgba(0, 122, 255, 0.12);
+  border-color: rgba(0, 122, 255, 0.4);
+}
+
+@keyframes recent-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recent-toast-artwork {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #888;
+}
+
+.recent-toast-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recent-toast-info {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.recent-toast-title {
+  font-size: 13.5px;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-toast-title strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.recent-toast-time {
+  font-size: 12px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.recent-toast-open {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4d9bff;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+.recent-toast-dismiss {
+  background: transparent;
+  border: none;
+  color: #666;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.recent-toast-dismiss:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Breadcrumbs */
+.breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 16px;
+}
+
+.crumb-root,
+.crumb {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.crumb-root:hover,
+.crumb:hover {
+  color: #fff;
+}
+
+.crumb.active {
+  color: #fff;
+  font-weight: 500;
+}
+
+.sep {
+  color: #444;
+  margin: 0 4px;
+}
+
+/* Items Container */
+.items-container {
+  width: 100%;
+}
+
+/* Grid View */
+.items-container.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 28px 20px;
+}
+
+.library-item {
+  cursor: pointer;
+  /* transition: transform 0.2s; */
+}
+
+/* .library-item:hover {
+  transform: translateY(-2px);
+} */
+
+.items-container.grid .library-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 28px;
+  transition: background-color 0.2s, transform 0.2s;
+  position: relative;
+}
+
+.items-container.grid .library-item:hover {
+  background-color: #1a1a1a;
+}
+
+.item-icon-wrapper {
+  width: 150px;
+  height: 150px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background-color: transparent;
+  transition: background-color 0.2s;
+}
+
+.item-icon-wrapper.project-wrapper {
+  background-color: transparent;
+  border: none;
+}
+
+.library-item:hover .item-icon-wrapper.project-wrapper {
+  background-color: transparent;
+}
+
+/* Specific styling for folder wrapper to match screenshot look */
+.item-icon-wrapper.folder-wrapper {
+  background-color: transparent;
+  border: none;
+}
+
+/* iOS-style folder peek tile: 2x2 grid of the first four children */
+.folder-peek-tile {
+  width: 110px;
+  height: 110px;
+  border-radius: 24px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.2s, transform 0.15s;
+}
+
+.library-item.folder:hover .folder-peek-tile {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.folder-peek-slot {
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  color: #777;
+  overflow: hidden;
+}
+
+.folder-peek-slot:empty {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.folder-peek-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.items-container.grid .folder-icon-img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+}
+
+.project-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.items-container.grid .project-icon-img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+}
+
+.generic-icon {
+  color: #444;
+}
+
+.item-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #ddd;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 8px;
+}
+
+.items-container.grid .item-sublabel {
+  font-size: 11px;
+  color: #666;
+  margin-top: -2px;
+}
+
+/* List View */
+.items-container.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.15s ease;
+}
+
+.list-row:hover {
+  background-color: #1a1a1a;
+}
+
+.list-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.list-icon.folder-wrapper {
+  background-color: transparent;
+  border: none;
+}
+
+/* Folder peek tile in list view: same look as grid, scaled to the list icon */
+.items-container.list .folder-peek-tile {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  padding: 8px;
+  gap: 5px;
+}
+
+.items-container.list .folder-peek-slot {
+  border-radius: 5px;
+}
+
+.list-row:hover .folder-peek-tile {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.list-icon-img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 0;
+}
+
+.list-icon-placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: #1e1e1e;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.list-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #eee;
+  min-width: 140px;
+  white-space: nowrap;
+}
+
+.list-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 40px;
+  font-size: 14px;
+  color: #666;
+}
+
+.list-meta-label {
+  color: #555;
+}
+
+.list-meta-value {
+  color: #999;
+}
+
+/* ===========================
+   Inline Audio Preview Buttons
+   =========================== */
+
+/* Grid card: play button tucks into the bottom-right of the artwork on hover. */
+.item-preview-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(4px) scale(0.9);
+  transition: opacity 0.15s, transform 0.15s, background 0.15s;
+}
+
+.library-item:hover .item-preview-btn,
+.library-item.playing .item-preview-btn {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.item-preview-btn:hover,
+.library-item.playing .item-preview-btn {
+  background: var(--accent-blue, #007AFF);
+}
+
+/* List row: play button centres over the DAW icon on hover. */
+.list-icon {
+  position: relative;
+}
+
+.list-preview-btn {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.list-row:hover .list-preview-btn,
+.list-row.playing .list-preview-btn {
+  opacity: 1;
+}
+
+.list-preview-btn:hover,
+.list-row.playing .list-preview-btn {
+  background: var(--accent-blue, #007AFF);
+}
+
+.list-meta-author {
+  color: #bbb;
+  margin-left: 8px;
+}
+
+.list-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.list-row:hover .list-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+.list-action-btn {
+  background-color: #1C1C1C;
+  border: 1px solid transparent;
+  color: #fff;
+  padding: 0 2rem;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.list-action-btn:hover {
+  background-color: #252525;
+  border-color: #4b5563;
+  color: #fff;
+}
+
+.list-action-btn--save {
+  color: #37E234;
+}
+
+.list-action-btn--save:hover {
+  background-color: #252525;
+  border-color: #37E234;
+}
+
+/* Footer */
+.library-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  z-index: 100;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+}
+
+.storage-meter-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.storage-meter-container .label {
+  font-size: 12px;
+  color: #888;
+}
+
+.storage-bar {
+  width: 200px;
+  height: 4px;
+  background-color: #333;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.storage-progress {
+  height: 100%;
+  background-color: #0066ff;
+  border-radius: 2px;
+}
+
+.storage-text {
+  font-size: 11px;
+  color: #666;
+  margin-left: 8px;
+}
+
+.plan-badge {
+  background-color: #1e1e1e;
+  color: #0066ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid #333;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+}
+
+.transfer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #888;
+  background-color: #1e1e1e;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid #333;
+}
+
+/* Empty/Loading */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: #666;
+}
+
+/* Fills the whole library area (behind the content), so the WebGL
+   <DitherGradient> renders at the same size/aspect as the Dither Lab — the
+   tuned preset looks identical here. The dither fades to transparent, so it
+   still reads as a top wash. Gentle fade-in on mount. */
+.empty-state-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  animation: empty-backdrop-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes empty-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .empty-state-backdrop {
+    animation: none;
+  }
+}
+
+.empty-state-content {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 88px 24px 96px;
+}
+
+.empty-state-icon {
+  color: #007AFF;
+  margin-bottom: 18px;
+}
+
+.empty-state-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.empty-state-subtitle {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #888;
+  margin: 6px 0 22px;
+}
+
+.empty-state-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 24px;
+  border: none;
+  background: #007AFF;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, background-color 0.15s;
+}
+
+.empty-state-cta:hover {
+  background: color-mix(in srgb, #007AFF 88%, white);
+  transform: translateY(-1px);
+}
+
+.empty-state-cta:active {
+  transform: translateY(0);
+}
+
+/* Drag and Drop */
+.library-item.dragging,
+.list-row.dragging {
+  opacity: 0.4;
+}
+
+.library-item.drag-over-folder,
+.list-row.drag-over-folder {
+  outline: 2px solid #007AFF;
+  outline-offset: -2px;
+  background: color-mix(in srgb, #007AFF 12%, transparent);
+}
+
+.library-item {
+  transition: opacity 0.15s ease;
+}
+
+.library-item > * {
+  pointer-events: none;
+}
+
+.list-row > *:not(.list-actions) {
+  pointer-events: none;
+}
+
+
+.crumb-root[data-drag-over="true"],
+.crumb[data-drag-over="true"] {
+  color: #4d8bff;
+  text-decoration: underline;
+}
+
+.library-item img,
+.list-row img {
+  -webkit-user-drag: none;
+}
+
+/* OS file drop → create project overlay */
+.library-drop-overlay {
+  position: absolute;
+  inset: 12px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--background, #0a0a0a) 74%, transparent);
+  backdrop-filter: blur(6px);
+  border: 2px dashed color-mix(in srgb, #007AFF 70%, transparent);
+  border-radius: 16px;
+  animation: drop-overlay-in 0.14s ease both;
+}
+
+.library-drop-overlay--error {
+  border-color: color-mix(in srgb, #ff453a 70%, transparent);
+  cursor: pointer;
+}
+
+.library-drop-overlay-inner {
+  /* Keep the overlay div itself the sole drag/drop target so hovering the
+     text below doesn't fire spurious dragleave/dragenter events. */
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.library-drop-overlay:not(.library-drop-overlay--error) svg {
+  color: #4d8bff;
+}
+
+.library-drop-overlay--error svg {
+  color: #ff6b61;
+}
+
+.library-drop-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.library-drop-overlay--error .library-drop-title {
+  color: #ff6b61;
+}
+
+.library-drop-sub {
+  font-size: 13px;
+  color: #9a9a9a;
+}
+
+@keyframes drop-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .library-header {
+    padding: 16px 20px;
+  }
+  .library-content {
+    padding: 0 20px 80px 20px;
+  }
+  .storage-meter-container {
+    display: none; /* Hide complex footer on mobile if needed */
+  }
+}
+
+/* ===========================
+   Filter Button & Dropdown
+   =========================== */
+.filter-btn-wrapper {
+  position: relative;
+}
+
+.filter-btn {
+  position: relative;
+}
+
+.filter-btn.active {
+  border-color: #007AFF;
+  color: #007AFF;
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.filter-btn.active:hover {
+  background-color: rgba(0, 122, 255, 0.18);
+  border-color: #007AFF;
+  color: #007AFF;
+}
+
+.filter-active-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #007AFF;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 12px;
+  min-width: 220px;
+  max-width: 300px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.filter-dropdown-empty {
+  display: block;
+  font-size: 13px;
+  color: #555;
+  font-style: italic;
+  padding: 4px 2px;
+}
+
+/* Faceted filter panel: wide, landscape layout with grouped facets. */
+.filter-dropdown--faceted {
+  width: 520px;
+  max-width: min(92vw, 520px);
+  min-width: 0;
+  max-height: 64vh;
+  overflow-y: auto;
+  padding: 6px;
+  background: #1c1c1e;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.filter-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.filter-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f0;
+}
+
+.filter-panel-clear {
+  font-size: 12px;
+  font-weight: 500;
+  color: #8f8f94;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.filter-panel-clear:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.filter-facet-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
+  align-items: start;
+  padding: 10px 12px 14px;
+}
+
+.filter-facet-heading {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b8b8bd;
+  margin: 0 0 10px;
+}
+
+.filter-dropdown--faceted .filter-dropdown-empty {
+  padding: 20px 14px;
+}
+
+/* Rectangular facet chips (not pills), used in the panel and the on-page bar. */
+.facet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  cursor: pointer;
+  background: #1a1a1a;
+  border: 1px solid color-mix(in srgb, var(--facet-color, #007AFF) 45%, transparent);
+  color: #cfcfcf;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.facet-chip:hover {
+  border-color: color-mix(in srgb, var(--facet-color, #007AFF) 70%, transparent);
+}
+
+/* Animated angle used by the active chip's rotating border. */
+@property --facet-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Active chip: dark fill with a slowly-rotating border that has two brighter
+   arcs on opposite sides. Layered gradients keep the fill dark (padding-box)
+   while the conic gradient paints only the border (border-box). */
+.facet-chip--active {
+  color: #fff;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#1a1a1a, #1a1a1a) padding-box,
+    conic-gradient(
+      from var(--facet-angle),
+      color-mix(in srgb, var(--facet-color, #007AFF) 62%, white) 0deg,
+      color-mix(in srgb, var(--facet-color, #007AFF) 78%, white) 55deg,
+      color-mix(in srgb, var(--facet-color, #007AFF) 62%, white) 110deg,
+      color-mix(in srgb, var(--facet-color, #007AFF) 62%, white) 200deg,
+      color-mix(in srgb, var(--facet-color, #007AFF) 78%, white) 235deg,
+      color-mix(in srgb, var(--facet-color, #007AFF) 62%, white) 290deg
+    ) border-box;
+  animation: facet-border-spin 10s linear infinite;
+}
+
+.facet-chip--active:hover {
+  border-color: transparent;
+}
+
+@keyframes facet-border-spin {
+  to { --facet-angle: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facet-chip--active {
+    animation: none;
+  }
+}
+
+.facet-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.facet-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.facet-chip-remove:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* On-page active-filter bar */
+.active-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.active-filters-clear {
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  background: transparent;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.active-filters-clear:hover {
+  color: #e5e5e5;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.filter-dropdown-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-dropdown-clear {
+  margin-top: 10px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid #333;
+  color: #888;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.filter-dropdown-clear:hover {
+  color: #e5e5e5;
+  border-color: #555;
+}
+
+/* ===========================
+   Tags on Grid Cards
+   =========================== */
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  padding: 4px 6px 0;
+  max-width: 100%;
+}
+
+.item-tags .tag-chip {
+  padding: 2px 8px;
+  font-size: 10px;
+  max-width: 70px;
+}
+
+.item-tags-more {
+  font-size: 10px;
+  color: #666;
+  padding: 2px 4px;
+  align-self: center;
+}
+
+/* ===========================
+   Tags on List Rows
+   =========================== */
+.list-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+  flex-shrink: 0;
+}
+
+.list-tags .tag-chip {
+  padding: 2px 10px;
+  font-size: 11px;
+}
+
+.list-tags-more {
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+}

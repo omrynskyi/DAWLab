@@ -1,0 +1,90 @@
+/* Container for preview notification - positioned in bottom right */
+.preview-notification-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+}
+
+/* Preview card uses the same styles as invitation-notification */
+.preview-card {
+    background: rgba(28, 28, 28, 0.95); /* var(--bg-card) */
+    backdrop-filter: blur(12px);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-card);
+    padding: 16px 20px;
+    width: 90vw;
+    max-width: 420px;
+    min-width: 320px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Inner content styling duplicate from ActivityPanel for standalone usage */
+.invitation-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.invitation-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.invitation-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+}
+
+.invitation-label .text-muted {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.project-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-main);
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.expires-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 4px;
+    font-weight: 400;
+}
+
+/* Commit ID styling */
+.preview-commit-id {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'Monaco', 'Courier New', monospace;
+    margin-top: 2px;
+}

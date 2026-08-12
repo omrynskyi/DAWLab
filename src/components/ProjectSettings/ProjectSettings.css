@@ -1,0 +1,798 @@
+/* ProjectSettings Component Styles - Updated */
+.project-settings {
+  width: 100%;
+  max-width: 600px;
+  padding: 0 2rem;
+  margin: auto;
+}
+
+/* Loading Spinner */
+.settings-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid rgba(156, 163, 175, 0.3);
+  border-top-color: #9ca3af;
+  animation: settings-spin 0.8s linear infinite;
+}
+
+@keyframes settings-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.project-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field-label {
+  color: #e5e5e5;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.project-settings .form-field-input,
+.project-settings .form-field-textarea {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: #1c1c1c;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+  outline: none;
+}
+
+.project-settings .form-field-input::placeholder,
+.project-settings .form-field-textarea::placeholder {
+  color: #6b6b6b;
+}
+
+.project-settings .form-field-input:focus,
+.project-settings .form-field-textarea:focus {
+  background: #1c1c1c;
+  border-color: #4a4a4a;
+}
+
+.project-settings .form-field-input:disabled {
+  color: #6b6b6b;
+  cursor: not-allowed;
+}
+
+.project-settings .form-field-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-secondary {
+  background: #3a3a3a;
+  color: #e5e5e5;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #4a4a4a;
+}
+
+.btn-primary {
+  background: #0094ff;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #007acc;
+}
+
+.btn-primary:disabled {
+  background: #555555;
+  cursor: not-allowed;
+}
+
+/* ==============================================
+   Collaborator Invite overrides for ProjectSettings
+   Use border instead of background for hover/focus
+   ============================================== */
+
+.project-settings .collaborator-row:hover {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+}
+
+.project-settings .collaborator-input {
+  border: 1px solid transparent;
+}
+
+.project-settings .collaborator-input:focus {
+  background: #1c1c1c;
+  border-color: #4a4a4a;
+}
+
+.project-settings .add-collaborator-button {
+  border: 1px solid transparent;
+  padding: 0.75rem;
+}
+
+.project-settings .add-collaborator-button:hover {
+  background: #2a2a2a;
+  border-color: #3a3a3a;
+}
+
+/* Invite Message Styles */
+.invite-message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.invite-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.invite-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ==============================================
+   Cloud Conversion Section
+   ============================================== */
+
+.cloud-zone {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.cloud-zone-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.cloud-zone-title {
+  color: #3b82f6;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.cloud-zone-description {
+  color: #a3a3a3;
+  font-size: 0.875rem;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.btn-cloud {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cloud:hover {
+  background: #2563eb;
+}
+
+/* ==============================================
+   Danger Zone Section
+   ============================================== */
+
+.danger-zone {
+  margin-top: 3rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.danger-zone-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.danger-zone-title {
+  color: #ef4444;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.danger-zone-description {
+  color: #a3a3a3;
+  font-size: 0.875rem;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-danger:disabled {
+  background: #555555;
+  cursor: not-allowed;
+}
+
+/* Cloud Confirmation Modal */
+.cloud-modal {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 450px;
+  width: 90%;
+}
+
+.cloud-modal-title {
+  color: #3b82f6;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.cloud-modal-text {
+  color: #a3a3a3;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem 0;
+}
+
+.cloud-modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.card-selection {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.selection-card {
+  flex: 1;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.selection-card:hover {
+  background: #333;
+  border-color: #3b82f6;
+}
+
+.selection-card.selected {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+}
+
+.selection-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: #e5e5e5;
+}
+
+.selection-card p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #a3a3a3;
+}
+
+/* Commit Selection List */
+.commit-selection-list {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #333;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  background: #1c1c1c;
+}
+
+.commit-selection-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.commit-selection-item:last-child {
+  border-bottom: none;
+}
+
+.commit-selection-item:hover {
+  background: #333;
+}
+
+.commit-selection-item.selected {
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+}
+
+.commit-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.commit-message {
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-right: 1rem;
+}
+
+.commit-time {
+  color: #a3a3a3;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.commit-item-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.commit-id,
+.commit-author {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  gap: 0.25rem;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 280px;
+}
+
+/* Delete Confirmation Modal */
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.delete-modal {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 450px;
+  width: 90%;
+}
+
+.delete-modal-title {
+  color: #ef4444;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.delete-modal-text {
+  color: #a3a3a3;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem 0;
+}
+
+.delete-modal-text strong {
+  color: #e5e5e5;
+}
+
+.delete-modal-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  outline: none;
+}
+
+.delete-modal-input:focus {
+  border-color: #ef4444;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+/* ==============================================
+   Project Path Display Section
+   ============================================== */
+
+.project-path-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.project-path-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.project-path-icon-button {
+    background: transparent;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    color: #8B8B8B;
+    padding: 0.4rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.project-path-icon-button:hover {
+    background: #2A2A2A;
+    border-color: #4a4a4a;
+    color: #E5E5E5;
+}
+
+.project-path-icon-button:has(svg[data-lucide="check"]) {
+    color: #22c55e;
+    border-color: #22c55e;
+}
+
+.project-path-icon-button svg {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Icon morph animation */
+@keyframes iconFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.5) rotate(-10deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes iconFadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.5) rotate(10deg);
+    }
+}
+
+.project-path-icon-button svg {
+    animation: iconFadeIn 0.3s ease-out;
+}
+
+.project-path-display-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.project-path-display {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: #1c1c1c;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: #8B8B8B;
+    font-size: 0.875rem;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+.project-path-change-button {
+    background: #007AFF;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.project-path-change-button:hover {
+    background: #0051D5;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.project-path-change-button:active {
+    transform: translateY(0);
+}
+
+
+/* Tags Layout Grid - Stacked Vertically */
+.tags-layout-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.tags-list-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tags-input-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tags-list-header,
+.tags-input-header {
+    color: #8B8B8B;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.tags-list-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0.75rem 1rem;
+    background: #1c1c1c;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    min-height: 52px; /* Ensure height matches input even closely */
+}
+
+.no-tags-placeholder {
+    color: #555;
+    font-size: 0.85rem;
+    font-style: italic;
+    padding: 4px 0;
+}
+
+/* Ensure empty container doesn't collapse weirdly */
+.tags-list-content:empty {
+    display: flex;
+    align-items: center;
+}
+
+/* Full width wrapper for TagInput */
+.tag-input-wrapper-full {
+    width: 100%;
+}
+
+.tag-input-wrapper-full .tag-input-container {
+    width: 100%;
+}
+
+/* Privacy Toggle Styles */
+.privacy-toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: #1c1c1c;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.privacy-toggle-container:hover {
+    border-color: #4a4a4a;
+}
+
+.privacy-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.privacy-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    line-height: 1;
+}
+
+.privacy-label.active {
+    color: #E5E5E5;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+    vertical-align: middle;
+    margin-top: 9px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #374151;
+    transition: 0.3s ease;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #fff;
+    transition: 0.3s ease;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #10b981;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.privacy-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.privacy-status-icon {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+}
+
+.privacy-status-icon.public {
+    color: #10b981;
+}
+
+.privacy-status-text {
+    color: #9CA3AF;
+    font-size: 0.85rem;
+}
+
+.privacy-description {
+    color: #6b7280;
+    font-size: 0.8rem;
+    margin: 0.5rem 0 0;
+    padding-left: 0.25rem;
+}
+
+/* Overrides for nested components in Project Settings */
+.project-settings .collaborator-row,
+.project-settings .collaborator-input,
+.project-settings .add-collaborator-button,
+.project-settings .role-dropdown-trigger,
+.project-settings .tag-input-field {
+    background: #1c1c1c !important;
+}
+
+.project-settings .collaborator-row:hover,
+.project-settings .add-collaborator-button:hover,
+.project-settings .role-dropdown-trigger:hover,
+.project-settings .collaborator-input:focus,
+.project-settings .tag-input-field:focus {
+     background: #1c1c1c !important; 
+     /* Optional: Add a subtle border or brightness filter for hover if needed, 
+        but sticking to the requested color for the background. 
+        The existing border styles will provide feedback. */
+}

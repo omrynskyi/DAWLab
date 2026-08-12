@@ -1,0 +1,54 @@
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  -webkit-app-region: drag;
+}
+
+.splash-screen--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-screen__wordmark {
+  width: min(440px, 60vw);
+  height: auto;
+  /* White wordmark lit up in DAWLab blue. */
+  animation:
+    splash-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) both,
+    splash-glow 1.8s ease-in-out 0.6s infinite alternate;
+}
+
+@keyframes splash-glow {
+  0% {
+    filter: drop-shadow(0 0 4px rgba(0, 123, 255, 0.35));
+  }
+  100% {
+    filter: drop-shadow(0 0 24px rgba(0, 123, 255, 0.95))
+      drop-shadow(0 0 48px rgba(0, 123, 255, 0.55));
+  }
+}
+
+@keyframes splash-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-screen__wordmark {
+    animation: splash-pop 0.4s ease both;
+    filter: drop-shadow(0 0 20px rgba(0, 123, 255, 0.85));
+  }
+}

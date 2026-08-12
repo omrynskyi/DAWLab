@@ -1,0 +1,190 @@
+/* Loading Spinner Styles */
+
+/* ===== BASE SPINNER ANIMATION ===== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ===== SPINNER ELEMENT ===== */
+.loading-spinner {
+  border-radius: 50%;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.2);
+  border-top-color: #007aff;
+  animation: spin 0.8s linear infinite;
+}
+
+/* White variant for dark backgrounds */
+.loading-spinner.white {
+  border-color: rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+}
+
+/* Blue variant for light/neutral contexts */
+.loading-spinner.blue {
+  border-color: rgba(0, 122, 255, 0.2);
+  border-top-color: #007aff;
+}
+
+/* ===== BUTTON SPINNER ===== */
+.loading-spinner.button {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+.button-loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.button-loading-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* ===== OVERLAY SPINNER ===== */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  border-radius: 20px;
+  z-index: 100;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.loading-spinner.overlay {
+  width: 48px;
+  height: 48px;
+  border-width: 3px;
+}
+
+.loading-overlay-message {
+  color: #e5e5e5;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.loading-overlay-submessage {
+  color: #8b8b8b;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* ===== PAGE SPINNER ===== */
+.loading-page {
+  position: fixed;
+  inset: 0;
+  background: var(--background);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.loading-spinner.page {
+  width: 64px;
+  height: 64px;
+  border-width: 4px;
+}
+
+.loading-page-message {
+  color: #e5e5e5;
+  font-size: 1.25rem;
+  font-weight: 500;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ===== INLINE SPINNER (for forms) ===== */
+.loading-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.loading-spinner.inline {
+  width: 24px;
+  height: 24px;
+  border-width: 2px;
+}
+
+/* ===== DOTS LOADER (alternative style) ===== */
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+.loading-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.loading-dot {
+  width: 8px;
+  height: 8px;
+  background: #007aff;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 0s;
+}
+
+.loading-dots.white .loading-dot {
+  background: white;
+}

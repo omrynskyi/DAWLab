@@ -1,0 +1,313 @@
+
+.file-tree-section {
+  padding: 0;
+  min-width: 280px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Safe area: dropzone height (70px) + bottom gap */
+  padding-bottom: 80px;
+  margin-left: 0;
+}
+
+@media (min-width: 900px) {
+  .file-tree-section {
+    margin-left: 0;
+  }
+}
+
+.file-tree-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.files-section-title {
+  font-size: 1.2rem;
+  font-weight: 550; 
+  color: #fff;
+  margin-bottom: 0;
+}
+
+.project-path-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.project-path-icon-button {
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  color: #8B8B8B;
+  padding: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-path-icon-button:hover {
+  background: #2A2A2A;
+  border-color: #4a4a4a;
+  color: #E5E5E5;
+}
+
+.project-path-icon-button:has(svg[data-lucide="check"]) {
+  color: #22c55e;
+  border-color: #22c55e;
+}
+
+.connect-folder-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 15px;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.connect-folder-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.project-path-unit {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.project-path-box {
+  background: #1C1C1C;
+  border-radius: 20px;
+  padding: 1.5rem;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: #666; /* Darker grey as in screenshot */
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: normal;
+  flex: 1;
+}
+
+.project-path-actions-inline {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.file-tree-container {
+  /* Fill all space given by .file-tree-section.
+     When squeezed below min-height, the page scrolls instead. */
+  flex: 1;
+  min-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #333;
+  border-radius: 20px;
+  padding: 1rem;
+  scrollbar-width: none;
+}
+ 
+/* Custom Scrollbar */
+.file-tree-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.file-tree-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.file-tree-container::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.file-tree-container::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+.tree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  color: #ccc;
+  font-size: 0.95rem;
+  cursor: default;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.tree-row.is-folder {
+  cursor: pointer;
+}
+
+.tree-row:hover {
+  color: #fff;
+}
+
+.tree-icon-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 40px; /* Fixed width for alignment */
+  flex-shrink: 0;
+}
+
+.tree-spacer {
+  width: 14px; /* Matches expander width */
+  display: inline-block;
+}
+
+.tree-expander {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.tree-expander.expanded {
+  transform: rotate(90deg);
+}
+
+.tree-type-icon {
+  opacity: 0.7;
+}
+
+.folder-icon {
+  color: #ccc;
+}
+
+.file-icon {
+  color: #888;
+}
+
+.tree-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-tree-loading, .file-tree-empty {
+  color: #666;
+  font-style: italic;
+  padding: 1rem;
+}
+
+/* Synthetic ".dawlabproject" row - DAWLab's own storage, not a tracked file */
+.dawlab-storage-row {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.tree-dawlab-icon {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+.dawlab-storage-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #666;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Per-row "Ignore" action - only visible on hover */
+.tree-ignore-button {
+  margin-left: auto;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #999;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.tree-row:hover .tree-ignore-button {
+  display: flex;
+}
+
+.tree-ignore-button:hover {
+  color: #fff;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Ignored files/folders shown inline, in their real tree position */
+.tree-row.is-untracked {
+  color: #777;
+}
+
+.tree-row.is-untracked .tree-label {
+  text-decoration: line-through;
+}
+
+.untracked-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #777;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tree-row.is-untracked:hover .untracked-badge {
+  display: none;
+}
+
+.tree-restore-button {
+  margin-left: auto;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #999;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.tree-row:hover .tree-restore-button {
+  display: flex;
+}
+
+.tree-restore-button:hover {
+  color: #fff;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}

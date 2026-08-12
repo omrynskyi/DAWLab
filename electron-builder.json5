@@ -1,0 +1,64 @@
+// @see - https://www.electron.build/configuration/configuration
+{
+  $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  appId: "com.dawlab.app",
+  asar: true,
+  productName: "DAWLab",
+  publish: null, // Disable auto-publishing (handled by GitHub Actions)
+  directories: {
+    output: "release/${version}",
+  },
+  files: ["dist", "dist-electron"],
+  mac: {
+    target: [
+      {
+        target: "dmg",
+        arch: ["x64", "arm64"],
+      },
+    ],
+    icon: "src/assets/icons/logo.icns",
+    artifactName: "${productName}-Mac-${arch}-${version}-Installer.${ext}",
+    identity: null, // Explicitly disable code signing
+    hardenedRuntime: false,
+    gatekeeperAssess: false,
+    entitlements: "entitlements.mac.plist",
+    entitlementsInherit: "entitlements.mac.plist",
+    protocols: [
+      {
+        name: "DAWLab",
+        schemes: ["dawlab"],
+      },
+    ],
+  },
+  dmg: {
+    sign: false, // Do not sign the DMG
+    writeUpdateInfo: false,
+  },
+  win: {
+    target: [
+      {
+        target: "nsis",
+        arch: ["x64", "arm64"],
+      },
+    ],
+    icon: "src/assets/icons/DAWLab_Logo.ico",
+    artifactName: "${productName}-Windows-${arch}-${version}-Setup.${ext}",
+  },
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+    deleteAppDataOnUninstall: false,
+  },
+  linux: {
+    target: ["AppImage"],
+    icon: "src/assets/logo.png",
+    artifactName: "${productName}-Linux-${version}.${ext}",
+  },
+  protocols: [
+    {
+      name: "DAWLab",
+      schemes: ["dawlab"],
+    },
+  ],
+}

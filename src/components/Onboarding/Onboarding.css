@@ -1,0 +1,563 @@
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  /* Anchor the step block from the top so titles land at the same Y on every
+     slide, instead of re-centering as each step's height changes. */
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 30vh;
+  background: #0a0a0a;
+  color: var(--text-main, #ffffff);
+  -webkit-app-region: drag;
+  overflow: hidden;
+}
+
+/* Full-screen WebGL dither backdrop (the <DitherGradient>). During the wizard
+   its radial params render a soft blue top band; the outro tween sweeps the
+   blue down to fill. Full-screen so filling never needs to resize the element. */
+.onboarding__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.onboarding__inner {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 92vw);
+  padding: 40px;
+  -webkit-app-region: no-drag;
+}
+
+.onboarding__step {
+  width: 100%;
+}
+
+/* ---- shared step layout ---- */
+.ob-step {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ob-step--center {
+  align-items: center;
+  text-align: center;
+  gap: 24px;
+  min-height: 260px;
+  justify-content: center;
+}
+
+.ob-title {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* First slide header: "Welcome to" + the DAWLab wordmark, inline on one line.
+   The wordmark is sized to match the text's cap height. */
+.ob-title--welcome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ob-wordmark {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+.ob-subtitle {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-secondary, #aaaaaa);
+  max-width: 46ch;
+}
+
+.ob-hero-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 122, 255, 0.12);
+  color: #4ea1ff;
+  border: 1px solid rgba(0, 122, 255, 0.25);
+}
+
+/* ---- username field ---- */
+.ob-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ob-input {
+  width: 100%;
+  padding: 13px 16px;
+  font-size: 16px;
+  color: var(--text-main, #fff);
+  background: var(--bg-card, #1c1c1c);
+  border: 1px solid var(--border-card, #333);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ob-input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.22);
+}
+
+.ob-input.is-error {
+  border-color: var(--color-error, #ef4444);
+}
+
+.ob-hint {
+  font-size: 12.5px;
+  color: var(--text-muted, #666);
+}
+
+.ob-hint.is-error {
+  color: var(--color-error, #ef4444);
+}
+
+/* ---- storage picker (radio list) ---- */
+.ob-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ob-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 18px;
+  text-align: left;
+  border-radius: 14px;
+  background: var(--bg-card, #1c1c1c);
+  border: 1px solid var(--border-card, #333);
+  color: var(--text-main, #fff);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.ob-option:hover:not(.is-active) {
+  background: var(--bg-card-hover, #1f1f1f);
+  border-color: var(--border-card-selected, #393939);
+}
+
+.ob-option.is-active {
+  border-color: #007aff;
+  background: #007aff;
+}
+
+.ob-option__icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #aaa);
+  transition: color 0.18s ease;
+}
+
+.ob-option.is-active .ob-option__icon {
+  color: #fff;
+}
+
+.ob-option__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ob-option__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.ob-option__desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary, #aaa);
+  transition: color 0.18s ease;
+}
+
+.ob-option.is-active .ob-option__desc {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* "Recommended" as a small tab tucked into the card's top-right corner. */
+.ob-rec {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 4px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: #007aff;
+  border-top-right-radius: 14px;
+  border-bottom-left-radius: 12px;
+}
+
+/* On the selected (solid-blue) card, flip the tab so it stays legible. */
+.ob-option.is-active .ob-rec {
+  color: #007aff;
+  background: #fff;
+}
+
+.ob-radio {
+  flex: 0 0 auto;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-card-selected, #454545);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.ob-option.is-active .ob-radio {
+  border-color: #fff;
+  background: #fff;
+}
+
+.ob-option.is-active .ob-radio::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #007aff;
+}
+
+/* ---- scan roots ---- */
+.ob-roots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ob-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: var(--text-secondary, #aaa);
+  background: var(--bg-card, #1c1c1c);
+  border: 1px solid var(--border-card, #333);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.ob-root.is-on {
+  color: #fff;
+  border-color: #007aff;
+  background: rgba(0, 122, 255, 0.1);
+}
+
+.ob-root__check {
+  color: #4ea1ff;
+}
+
+.ob-root--add {
+  border-style: dashed;
+}
+
+/* ---- scanning ---- */
+.ob-scan-spinner {
+  color: #4ea1ff;
+}
+
+.ob-scan-path {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted, #666);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- results ---- */
+.ob-results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ob-selectall {
+  background: none;
+  border: none;
+  color: #4ea1ff;
+  font-size: 13.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ob-selectcount {
+  font-size: 12.5px;
+  color: var(--text-muted, #666);
+}
+
+.ob-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ob-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: var(--bg-card, #1c1c1c);
+  border: 1px solid var(--border-card, #333);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ob-result:hover:not(.is-disabled) {
+  background: var(--bg-card-hover, #1f1f1f);
+}
+
+.ob-result.is-selected {
+  border-color: #007aff;
+  background: rgba(0, 122, 255, 0.07);
+}
+
+.ob-result.is-disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ob-checkbox {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  border-radius: 6px;
+  border: 1px solid var(--border-card-selected, #393939);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.ob-result.is-selected .ob-checkbox {
+  background: #007aff;
+  border-color: #007aff;
+}
+
+.ob-result__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ob-result__name {
+  font-size: 14px;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ob-result__path {
+  font-size: 12px;
+  color: var(--text-muted, #666);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ob-daw {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--text-secondary, #aaa);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ob-imported {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--color-success, #22c55e);
+}
+
+/* ---- actions ---- */
+.ob-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* When there's a single button it sits on the right. */
+.ob-actions > .ob-btn--primary:only-child {
+  margin-left: auto;
+}
+
+.ob-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  font-size: 14.5px;
+  font-weight: 600;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease,
+    opacity 0.15s ease;
+}
+
+.ob-btn:active {
+  transform: translateY(1px);
+}
+
+.ob-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ob-btn--primary {
+  background: #007aff;
+  color: #fff;
+}
+
+.ob-btn--primary:hover:not(:disabled) {
+  background: #0a84ff;
+}
+
+.ob-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary, #aaa);
+  border-color: var(--border-card, #333);
+}
+
+.ob-btn--ghost:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--border-card-selected, #393939);
+}
+
+.ob-spin {
+  animation: ob-spin 0.9s linear infinite;
+}
+
+@keyframes ob-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Grouped actions on the right (e.g. Skip + Scan next to a Back button). */
+.ob-actions__group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ---- editorial outro ----
+   Sequence: (1) the dither backdrop's shader params sweep the blue down to fill
+   (driven in JS by tweenDither — see Onboarding.tsx), (2) "Welcome to DAWLab"
+   fades in white over it, (3) the whole overlay fades out to reveal the app. */
+
+/* Step 3: fade the whole overlay out near the end (before onComplete). */
+.onboarding.is-outro {
+  animation: ob-outro-out 0.55s ease 2.05s both;
+}
+
+.ob-outro {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Step 2: welcome message fades up over the filled blue. */
+.ob-outro__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  opacity: 0;
+  animation: ob-welcome-in 0.8s cubic-bezier(0.65, 0, 0.35, 1) 1.05s forwards;
+}
+
+.ob-outro__welcome {
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+}
+
+.ob-outro__wordmark {
+  height: 64px;
+  width: auto;
+  display: block;
+}
+
+@keyframes ob-welcome-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ob-outro-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The backdrop jumps straight to the filled state via setParams (see the
+     outro effect); here we just skip the content/overlay animations. */
+  .ob-outro__content {
+    opacity: 1;
+    animation: none;
+  }
+  .onboarding.is-outro {
+    animation: ob-outro-out 0.4s ease 1.8s both;
+  }
+}

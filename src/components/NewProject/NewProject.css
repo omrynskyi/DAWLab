@@ -1,0 +1,894 @@
+.new-project-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.new-project-container {
+  width: 700px;
+  max-height: 90vh;
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  position: relative;
+  animation: slideUp 0.3s ease-out;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+input[type="text"] {
+  padding: 0.6em 1.2em;
+}
+
+/* Close Button */
+.close-button {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-dot {
+  width: 16px;
+  height: 16px;
+  background: #FF5F57;
+  border-radius: 50%;
+  transition: opacity 0.2s;
+}
+
+.close-button:hover .close-dot {
+  opacity: 0.8;
+}
+
+/* Form */
+.new-project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-label {
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Section Label Row with Info Icon */
+.section-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.privacy-info-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.privacy-info-icon {
+  color: #6B6B6B;
+  cursor: help;
+  transition: color 0.2s;
+}
+
+.privacy-info-wrapper:hover .privacy-info-icon {
+  color: #B0B0B0;
+}
+
+.privacy-info-tooltip {
+  position: absolute;
+  left: calc(100% + 0.75rem);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1E1E1E;
+  border: 1px solid #3A3A3A;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.privacy-info-wrapper:hover .privacy-info-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #2A2A2A;
+}
+
+.tooltip-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tooltip-item:first-child {
+  padding-top: 0;
+}
+
+.tooltip-item strong {
+  color: #E5E5E5;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tooltip-item span {
+  color: #8B8B8B;
+  font-size: 0.8rem;
+}
+
+/* Project Name Input */
+.project-name-input {
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card-hover);
+  border: none;
+  border-radius: 12px;
+  color: var(--text-main);
+  font-size: 1rem;
+  transition: background 0.2s;
+  outline: none;
+}
+
+.project-name-input::placeholder {
+  color: #6B6B6B;
+}
+
+.project-name-input:focus {
+  background: #323232;
+}
+
+/* Browse Button */
+/* Browse Button */
+.browse-button {
+  padding: 0.9rem 2rem;
+  background: #007AFF;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.browse-button:hover {
+  background: #0051D5;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.browse-button:active {
+  transform: translateY(0);
+}
+
+/* Path Input */
+.path-input {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: var(--bg-card-hover);
+  border: none;
+  border-radius: 12px;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  outline: none;
+}
+
+.path-input::placeholder {
+  color: #6B6B6B;
+}
+
+.path-input:focus {
+  background: #323232;
+}
+
+/* Privacy Toggle */
+.privacy-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: #2A2A2A;
+  border-radius: 12px;
+  padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+  align-self: flex-start;
+  gap: 0.25rem;
+}
+
+.privacy-option {
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: #8B8B8B;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  padding: 0.6rem 1.25rem;
+  outline: none;
+}
+
+.privacy-option:hover,
+.privacy-option:focus,
+.privacy-option:focus-visible {
+  border-color: transparent;
+  outline: none;
+}
+
+.privacy-option.active {
+  background: #3A3A3A;
+  color: #E5E5E5;
+}
+
+.privacy-option:hover:not(.active) {
+  color: #B0B0B0;
+}
+
+/* Local option - standard size with balanced padding */
+.privacy-option.local-option {
+  font-size: 0.85rem;
+  padding: 0.6rem 1.25rem;
+}
+
+/* Divider between local and cloud */
+.privacy-divider {
+  width: 1px;
+  height: 24px;
+  background: #4A4A4A;
+  margin: 0 0.25rem;
+}
+
+/* Cloud options container */
+.cloud-options {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Cloud options - slightly larger and more prominent */
+.privacy-option.cloud-option {
+  font-size: 0.95rem;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Option wrapper for positioning the sliding indicator */
+.privacy-option-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Sliding indicator that moves between options */
+.privacy-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.privacy-indicator.local-indicator {
+  background: #3A3A3A;
+}
+
+.privacy-indicator.cloud-indicator {
+  background: #007AFF;
+}
+
+/* Make text appear above the indicator */
+.privacy-option {
+  position: relative;
+  z-index: 1;
+}
+
+/* Remove background from active buttons since indicator provides it */
+.privacy-option.active {
+  background: transparent;
+}
+
+.privacy-option.cloud-option.active {
+  background: transparent;
+  color: white;
+}
+
+/* Storage location toggle */
+.storage-mode-toggle {
+  display: flex;
+  flex-direction: row;
+  background: #2A2A2A;
+  border-radius: 16px;
+  padding: 0.5rem;
+  gap: 0.5rem;
+}
+
+.storage-mode-option-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.storage-mode-option {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  color: #8B8B8B;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 1.5rem 1rem;
+  outline: none;
+  text-align: center;
+}
+
+.storage-mode-option:hover:not(.active) {
+  color: #B0B0B0;
+}
+
+.storage-mode-option.active {
+  color: #fff;
+}
+
+.storage-mode-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: #007AFF;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.storage-mode-hint {
+  color: #8B8B8B;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0.5rem 0 0;
+}
+
+/* Collaborators */
+.collaborators-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.collaborator-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #2A2A2A;
+  border-radius: 12px;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.collaborator-row:hover {
+  background: #323232;
+}
+
+.collaborator-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.collaborator-name {
+  color: #E5E5E5;
+  font-size: 0.95rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  min-width: 140px;
+}
+
+.collaborator-email {
+  color: #8B8B8B;
+  font-size: 0.9rem;
+  flex-grow: 1;
+}
+
+.remove-collaborator {
+  background: transparent;
+  border: none;
+  color: #8B8B8B;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.remove-collaborator:hover {
+  background: rgba(255, 95, 87, 0.2);
+  color: #FF5F57;
+}
+
+/* Collaborator Input */
+.collaborator-input {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: #2A2A2A;
+  border: none;
+  border-radius: 12px;
+  color: #E5E5E5;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  outline: none;
+}
+
+.collaborator-input::placeholder {
+  color: #6B6B6B;
+}
+
+.collaborator-input:focus {
+  background: #323232;
+}
+
+/* Add Collaborator Button */
+.add-collaborator-button {
+  width: 100%;
+  padding: 1.5rem;
+  background: #2A2A2A;
+  border: none;
+  border-radius: 12px;
+  color: #6B6B6B;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-collaborator-button:hover {
+  background: #323232;
+  color: #8B8B8B;
+}
+
+.add-collaborator-button:active {
+  transform: scale(0.98);
+}
+
+/* Error Message */
+.error-message {
+  padding: 1rem;
+  background: rgba(255, 95, 87, 0.1);
+  border: 1px solid rgba(255, 95, 87, 0.3);
+  border-radius: 8px;
+  color: #FF5F57;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #2A2A2A;
+}
+
+.action-button {
+  /* padding: 0.85rem 2rem; */
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button.secondary {
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.action-button.secondary:hover {
+  background: #323232;
+}
+
+.action-button.primary {
+  background: var(--color-info);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.action-button.primary:hover {
+  background: #0051D5;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.action-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .new-project-container {
+    padding: 2rem 1.5rem;
+  }
+
+  .collaborator-name {
+    min-width: unset;
+  }
+
+  .collaborator-email {
+    display: none;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+  }
+}
+
+/* ==================== */
+/* DAW Selection Step   */
+/* ==================== */
+
+.daw-select-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 1rem;
+  gap: 1.5rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* DAW Selector Row - boxed container like privacy toggle */
+.daw-selector {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #2A2A2A;
+  border-radius: 20px;
+}
+
+.daw-option-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.daw-option {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.daw-option:hover:not(.active) {
+  background: #3A3A3A;
+}
+
+.daw-option.active {
+  background: transparent;
+}
+
+.daw-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Animated DAW indicator - sliding box like privacy toggle */
+.daw-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: #3A3A3A;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* DAW Instructions - fixed height container for stability */
+.daw-instructions-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* DAW Instructions - fixed sizing across all DAWs */
+.daw-instructions {
+  width: 100%;
+  max-width: 650px;
+  height: 420px;
+  text-align: left;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.daw-instruction-title {
+  color: #E5E5E5;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  text-decoration: underline;
+}
+
+.daw-instruction-text {
+  color: #E5E5E5;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.daw-instruction-hint {
+  color: #8B8B8B;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+.daw-checklist {
+  list-style: disc;
+  padding-left: 1.5rem;
+  color: #B0B0B0;
+  margin: 0;
+}
+
+.daw-checklist li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.daw-checklist em {
+  color: #007AFF;
+  font-style: normal;
+}
+
+.daw-checklist strong {
+  color: #E5E5E5;
+}
+
+/* Multi-step instructions (Ableton) */
+.daw-step {
+  margin-bottom: 1.5rem;
+}
+
+.daw-step:last-child {
+  margin-bottom: 0;
+}
+
+.daw-step-title {
+  color: #8B8B8B;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.daw-step .daw-instruction-text {
+  margin-bottom: 0.5rem;
+}
+
+/* Ableton-specific layout */
+.ableton-instructions {
+  max-width: 650px;
+}
+
+.ableton-step-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.ableton-text-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.ableton-screenshot {
+  width: 220px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.ableton-text-column .ableton-screenshot {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.ableton-text-column .daw-instruction-text {
+  margin: 0;
+}
+
+/* DAW Actions (Confirm button) */
+.daw-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding-top: 1rem;
+}
+
+.daw-confirm-button {
+  min-width: 200px;
+  padding: 1rem 3rem;
+  font-size: 1rem;
+}
+
+/* Back Button */
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  color: #8B8B8B;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  /* Clear the absolutely-positioned close dot (top/left: 1.5rem) so the
+     button doesn't crowd up against it. */
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  transition: color 0.2s;
+}
+
+.back-button:hover {
+  color: #E5E5E5;
+}
+
+/* DAW Screenshots */
+.daw-screenshot {
+  width: 60%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-top: 0.75rem;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  border: 1px solid #3A3A3A;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.daw-screenshot-small {
+  max-width: 180px;
+  border-radius: 6px;
+  border: 1px solid #3A3A3A;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Ableton step layout with side-by-side images */
+.daw-step-content {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.daw-step-text {
+  flex: 1;
+}
+
+.daw-step-images {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Responsive DAW selector */
+@media (max-width: 480px) {
+  .daw-option {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    padding: 0.5rem;
+  }
+
+  .daw-indicator {
+    border-radius: 12px;
+  }
+
+  .daw-selector {
+    gap: 0.5rem;
+  }
+
+  .daw-step-content {
+    flex-direction: column;
+  }
+
+  .daw-screenshot-small {
+    max-width: 100%;
+  }
+}

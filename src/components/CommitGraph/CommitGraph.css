@@ -1,0 +1,292 @@
+.commit-graph-wrapper {
+  width: 100%;
+}
+
+.commit-header {
+  margin-bottom: 1.5rem;
+  padding: 0 2rem;
+}
+
+.commit-graph-title {
+  color: var(--text-main);
+  font-size: 1.2rem;
+  font-weight: 550;
+}
+
+.commit-graph-container {
+  width: 100%;
+  padding: 1rem 0 2rem 0; /* Added top and increased bottom padding */
+  /* Add fade out effect on both sides */
+  -webkit-mask-image: linear-gradient(to right, 
+    transparent 0%, 
+    black 40px, 
+    black calc(100% - 40px), 
+    transparent 100%
+  );
+  mask-image: linear-gradient(to right, 
+    transparent 0%, 
+    black 40px, 
+    black calc(100% - 40px), 
+    transparent 100%
+  );
+}
+
+.horizontal-scroll {
+  overflow-x: auto;
+  overflow-y: visible; /* Change to visible to allow scale/shadows */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+
+.horizontal-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.commit-cards-list {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0 2rem;
+  min-width: max-content;
+}
+
+.commit-card {
+  width: 400px;
+  height: 190px;
+  background: var(--accent);
+  border: none;
+  border-radius: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Vertically center everything */
+  padding: 1.5rem 2.5rem;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.commit-card:hover {
+  background: var(--bg-card-hover);
+}
+
+.commit-card.selected {
+  background: var(--bg-card-selected);
+  z-index: 10; /* Ensure scaled card is above neighbors */
+}
+
+/* Re-add colored borders for specific states */
+.commit-card.current,
+.commit-card.modified:not(.save-card) {
+  border: 1.5px solid var(--color-success);
+}
+
+.commit-card.modified.save-card {
+  border: 1.5px solid var(--color-warning);
+}
+
+.commit-card.sync {
+  border: 1.5px solid var(--color-info);
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Alight text content to the left */
+  gap: 0.5rem;
+}
+
+.commit-message-full {
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  margin: 0;
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 42px;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between; /* Spread date and author */
+  width: 100%;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.card-footer .timestamp {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.card-footer .author {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.card-action {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: center;
+  width: 100%; /* Ensure button can be centered within the card */
+}
+
+.status-button {
+  width: 140px;
+  height: 36px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  background-color: transparent;
+}
+
+.status-button:hover:not(:disabled):not(.current):not(.modified) {
+  background: rgba(255, 255, 255, 0.05); /* Soft hover state */
+}
+
+.status-button.current, .status-button.modified {
+  background: transparent !important;
+  color: var(--text-main) !important;
+  border: none   !important;
+  cursor: default;
+  pointer-events: none; /* Completely disable hover/interaction as requested */
+}
+
+.status-button.current svg, .status-button.modified svg {
+  color: var(--color-success); /* Green checkmark */
+}
+
+.status-button.sync {
+  border: 1px solid var(--color-info);
+  color: var(--color-info);
+}
+
+.status-button.restorable {
+  border: 1px solid var(--color-info);
+  color: var(--text-main); /* White text as requested */
+}
+
+.status-button.restorable svg {
+  color: var(--color-info); /* Keep icon color blue or match requested style if specified */
+}
+
+.version-input {
+  width: 100%;
+  height: 42px; /* Match updated height */
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  padding: 0;
+  text-align: left;
+  color: var(--text-main);
+}
+
+.version-input::placeholder {
+  color: var(--text-muted);
+}
+
+.save-version-button,
+.cancel-version-button {
+  width: 100px; /* More compact for side-by-side */
+  height: 36px;
+  border-radius: 15px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.save-version-button {
+  border: 1px solid var(--color-warning) !important;
+  color: var(--text-main) !important;
+}
+
+.cancel-version-button {
+  border: 1px solid var(--text-muted) !important;
+  color: var(--text-secondary) !important;
+}
+
+.cancel-version-button:hover:not(:disabled) {
+  background: var(--border-muted);
+  border-color: var(--text-secondary) !important;
+  color: var(--text-main) !important;
+}
+
+.save-card .card-action {
+  margin-top: 0.85rem; /* Level button with regular cards */
+}
+
+.save-version-button:hover:not(:disabled) {
+  background: rgba(234, 179, 8, 0.1);
+}
+
+.save-version-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px) scale(0.95);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-out {
+  animation: slideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 1s linear infinite;
+}
