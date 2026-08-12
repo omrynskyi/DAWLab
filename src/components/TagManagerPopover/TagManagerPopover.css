@@ -1,11 +1,12 @@
+/* TagManagerPopover — matches the faceted filter dropdown panel. */
 .tag-manager-popover {
   position: fixed;
   z-index: 1100;
   width: 260px;
-  background: #121212;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  background: #1c1c1e;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
@@ -22,15 +23,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px 8px;
+  padding: 12px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .tmp-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #e5e5e5;
-  letter-spacing: 0.01em;
+  color: #f0f0f0;
 }
 
 .tmp-close {
@@ -39,20 +39,20 @@
   justify-content: center;
   background: transparent;
   border: none;
-  color: #666;
+  color: #8f8f94;
   cursor: pointer;
-  padding: 2px;
-  border-radius: 6px;
+  padding: 4px;
+  border-radius: 8px;
   transition: color 0.15s, background 0.15s;
 }
 
 .tmp-close:hover {
-  color: #e5e5e5;
+  color: #fff;
   background: rgba(255, 255, 255, 0.08);
 }
 
 .tmp-body {
-  padding: 10px 14px;
+  padding: 12px 14px;
   min-height: 44px;
   display: flex;
   align-items: flex-start;
@@ -68,15 +68,10 @@
 .tmp-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .tmp-footer {
-  padding: 8px 14px 12px;
+  padding: 10px 14px 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* Make TagInput fill the full width inside the popover */
-.tmp-footer .tag-input-container {
-  width: 100%;
 }

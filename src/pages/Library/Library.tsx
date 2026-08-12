@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Library.css';
-import { Plus, FolderPlus, Search, LayoutGrid, List, Music, User, Loader2, ArrowUpRight, FileMusic, Filter, X, Play, Pause } from 'lucide-react';
+import { Plus, FolderPlus, Search, LayoutGrid, List, Music, User, Loader2, ArrowUpRight, FileMusic, Filter, X, Play, Square } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import logicLogo from '@/assets/logic_logo.png';
 import abletonLogo from '@/assets/ableton_live_logo.png';
@@ -1167,12 +1167,12 @@ export const Library: React.FC = () => {
                                <button
                                  className="item-preview-btn"
                                  onClick={(e) => { e.stopPropagation(); togglePreview(project); }}
-                                 aria-label={playingId === project.id ? 'Pause preview' : 'Play preview'}
+                                 aria-label={playingId === project.id ? 'Stop preview' : 'Play preview'}
                                >
                                  {loadingId === project.id ? (
                                    <Loader2 size={18} className="animate-spin" />
                                  ) : playingId === project.id ? (
-                                   <Pause size={18} />
+                                   <Square size={18} />
                                  ) : (
                                    <Play size={18} />
                                  )}
@@ -1262,12 +1262,12 @@ export const Library: React.FC = () => {
                                <button
                                  className="list-preview-btn"
                                  onClick={(e) => { e.stopPropagation(); togglePreview(project); }}
-                                 aria-label={playingId === project.id ? 'Pause preview' : 'Play preview'}
+                                 aria-label={playingId === project.id ? 'Stop preview' : 'Play preview'}
                                >
                                  {loadingId === project.id ? (
                                    <Loader2 size={16} className="animate-spin" />
                                  ) : playingId === project.id ? (
-                                   <Pause size={16} />
+                                   <Square size={16} />
                                  ) : (
                                    <Play size={16} />
                                  )}

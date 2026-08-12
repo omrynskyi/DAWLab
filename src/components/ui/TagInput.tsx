@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { toTitleCase } from './TagChip';
 import { ColorPalette } from './ColorPalette';
 import './TagInput.css';
@@ -12,8 +13,9 @@ interface TagInputProps {
 }
 
 /**
- * TagInput component for adding new tags with color palette selection.
- * Enforces max character limit and provides visual feedback.
+ * TagInput — a single integrated field for creating a tag. The color swatch,
+ * text input and add action live inside one chip-styled container that adopts
+ * the selected tag color on focus. Enter or the inline + button commits.
  */
 export const TagInput: React.FC<TagInputProps> = ({
   onAddTag,
@@ -25,6 +27,8 @@ export const TagInput: React.FC<TagInputProps> = ({
   const [value, setValue] = useState('');
   const [selectedColor, setSelectedColor] = useState(defaultColor);
   const [showPalette, setShowPalette] = useState(false);
+
+  const canSubmit = value.trim().length > 0 && value.trim().length <= maxLength;
 
   const handleSubmit = () => {
     const trimmed = value.trim();
@@ -47,30 +51,32 @@ export const TagInput: React.FC<TagInputProps> = ({
   };
 
   return (
-    <div className="tag-input-container">
-      {/* Color button showing selected color */}
+    <div
+      className="tag-input"
+      style={{ ['--tag-color']: selectedColor } as React.CSSProperties}
+    >
+      {/* Color swatch — click to open the palette */}
       <button
         type="button"
-        className="tag-input-color-btn"
+        className="tag-input-swatch"
         style={{ backgroundColor: selectedColor }}
         onClick={() => setShowPalette(!showPalette)}
         disabled={disabled}
         title="Select color"
+        aria-label="Select tag color"
       />
-      
+
       {/* Color palette dropdown */}
       {showPalette && (
         <div className="tag-input-palette-dropdown">
           <ColorPalette
             selectedColor={selectedColor}
-            onColorSelect={(color) => {
-              setSelectedColor(color);
-            }}
+            onColorSelect={(color) => setSelectedColor(color)}
             compact
           />
         </div>
       )}
-      
+
       <input
         type="text"
         className="tag-input-field"
@@ -81,13 +87,17 @@ export const TagInput: React.FC<TagInputProps> = ({
         disabled={disabled}
         maxLength={maxLength}
       />
+
+      {/* Inline add — integrated into the field, active only when there's text */}
       <button
         type="button"
-        className="tag-input-button"
+        className="tag-input-add"
         onClick={handleSubmit}
-        disabled={disabled || !value.trim()}
+        disabled={disabled || !canSubmit}
+        aria-label="Add tag"
+        title="Add tag"
       >
-        +Add
+        <Plus size={15} />
       </button>
     </div>
   );

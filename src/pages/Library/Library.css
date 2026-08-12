@@ -985,6 +985,14 @@
   pointer-events: none;
 }
 
+/* The card's children are pointer-events:none so HTML5 drag lands on the card
+   itself, but that also swallows clicks on the nested preview button. Re-enable
+   it explicitly so auditioning works. */
+.item-preview-btn,
+.list-preview-btn {
+  pointer-events: auto;
+}
+
 
 .crumb-root[data-drag-over="true"],
 .crumb[data-drag-over="true"] {

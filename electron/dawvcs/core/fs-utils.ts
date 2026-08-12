@@ -193,9 +193,10 @@ async function getLatestModTimeRecursive(rootPath: string): Promise<{ latestModT
         const name = entry.name;
         // Skip metadata/backup folders and system files that shouldn't trigger "modified" state
         if (
-          name === 'Backup' || 
-          name === 'Project File Backups' || 
-          name === '.dawlab' || 
+          name === 'Backup' ||
+          name === 'Project File Backups' ||
+          name === '.dawlab' ||
+          name === '.dawlabproject' ||
           name === '.DS_Store' ||
           name === 'desktop.ini'
         ) {

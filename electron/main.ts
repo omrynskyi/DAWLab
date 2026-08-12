@@ -499,16 +499,18 @@ ipcMain.handle(
     commitId: string,
     fileName: string,
   ) => {
-    const { commitsDir: previewCommitsDir } = getProjectStorageDirs(projectName);
+    const { commitsDir: previewCommitsDir, casDir } = getProjectStorageDirs(projectName);
     const commitPath = getCommitPath(projectName, commitId, previewCommitsDir);
-    const fullPath = path.join(commitPath, fileName);
-  
-  // Check if file exists locally
-  if (fs.existsSync(fullPath)) {
-    return `dawpreview://active${fullPath.startsWith('/') ? '' : '/'}${fullPath}`;
-  }
+    const commitFilePath = path.join(commitPath, fileName);
 
-  return `dawpreview://active${fullPath.startsWith("/") ? "" : "/"}${fullPath}`;
+    // Previews attached via addPreviewToCommit are copied into the commit dir,
+    // but previews captured during a normal commit live only in CAS (fileName is
+    // the preview's CAS hash). Prefer the commit-dir copy, fall back to CAS.
+    const fullPath = fs.existsSync(commitFilePath)
+      ? commitFilePath
+      : getCasPath(fileName, casDir);
+
+    return `dawpreview://active${fullPath.startsWith("/") ? "" : "/"}${fullPath}`;
   },
 );
 

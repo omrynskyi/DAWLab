@@ -1,29 +1,42 @@
-/* TagInput Component Styles */
+/* TagInput — one integrated chip-styled field: [swatch] [input] [ + ].
+   Adopts the selected tag color (--tag-color) on focus, matching the
+   library facet-chip design system. */
 
-.tag-input-container {
+.tag-input {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   position: relative;
+  width: 100%;
+  padding: 4px 4px 4px 10px;
+  border-radius: 10px;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.tag-input-color-btn {
-  width: 22px;
-  height: 22px;
-  min-width: 22px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.tag-input:focus-within {
+  border-color: color-mix(in srgb, var(--tag-color, #007AFF) 60%, transparent);
+  background: color-mix(in srgb, var(--tag-color, #007AFF) 8%, #1a1a1a);
+}
+
+.tag-input-swatch {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
   padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
 }
 
-.tag-input-color-btn:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.6);
-  transform: scale(1.1);
+.tag-input-swatch:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.55);
+  transform: scale(1.08);
 }
 
-.tag-input-color-btn:disabled {
+.tag-input-swatch:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -39,49 +52,46 @@
 
 .tag-input-field {
   flex: 1;
-  min-width: 90px;
-  max-width: 150px;
-  padding: 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  min-width: 0;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
   color: #e5e7eb;
   font-size: 13px;
   outline: none;
-  transition: all 0.2s ease;
 }
 
 .tag-input-field::placeholder {
   color: rgba(255, 255, 255, 0.4);
 }
 
-.tag-input-field:focus {
-  border-color: rgba(0, 123, 255, 0.5);
-  background: rgba(0, 123, 255, 0.1);
-}
-
-.tag-input-button {
-  display: flex;
+/* Inline add button — reads as part of the field, not a separate control. */
+.tag-input-add {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 12px;
-  border: 1px solid rgba(0, 123, 255, 0.5);
-  border-radius: 8px;
-  background: rgba(0, 123, 255, 0.15);
-  color: #7cc4ff;
-  font-size: 13px;
-  font-weight: 500;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 }
 
-.tag-input-button:hover:not(:disabled) {
-  background: rgba(0, 123, 255, 0.3);
-  border-color: rgba(0, 123, 255, 0.8);
+.tag-input-add:not(:disabled) {
+  background: color-mix(in srgb, var(--tag-color, #007AFF) 22%, transparent);
+  color: color-mix(in srgb, var(--tag-color, #007AFF) 55%, white);
 }
 
-.tag-input-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.tag-input-add:not(:disabled):hover {
+  background: color-mix(in srgb, var(--tag-color, #007AFF) 38%, transparent);
+  color: #fff;
+}
+
+.tag-input-add:disabled {
+  cursor: default;
 }
