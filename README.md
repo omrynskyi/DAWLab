@@ -63,6 +63,88 @@ npm run build:renderer
 
 ---
 
+## Running an unsigned build
+
+The packaged apps are **not code-signed or notarized** (`electron-builder.json5` sets `identity: null` and ships an unsigned DMG). Your OS will therefore block the app on first launch. You have two options: bypass the warning once, or sign the app yourself.
+
+### macOS
+
+macOS Gatekeeper blocks unsigned apps with either *"DAWLab can't be opened because Apple cannot check it for malicious software"* or, on Apple Silicon, *"DAWLab is damaged and can't be opened"* (the "damaged" message is Gatekeeper's misleading wording for an unsigned/quarantined app — the app is fine).
+
+**Option A — bypass Gatekeeper (quickest).** After moving `DAWLab.app` to `/Applications`, strip the quarantine attribute:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/DAWLab.app
+```
+
+Then open it normally. (Right-click → **Open** → **Open** also works for the "unidentified developer" case, but not for the "damaged" case — use the command above for that.)
+
+**Option B — ad-hoc sign it yourself (no Apple account needed).** An ad-hoc signature (`-` as the identity) satisfies the loader without any certificate. This is the simplest way to make an Apple Silicon build launchable:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/DAWLab.app
+codesign --force --deep --sign - /Applications/DAWLab.app
+```
+
+**Option C — sign with a real Apple Developer ID (for distribution).** If you have a paid Apple Developer account and a *Developer ID Application* certificate installed in your Keychain, you can produce a properly signed, notarizable app.
+
+1. Find your identity:
+   ```bash
+   security find-identity -v -p codesigning
+   # e.g. "Developer ID Application: Your Name (TEAMID)"
+   ```
+2. Let electron-builder sign during packaging by editing `electron-builder.json5`:
+   ```json5
+   mac: {
+     identity: "Developer ID Application: Your Name (TEAMID)",
+     hardenedRuntime: true,        // required for notarization
+     gatekeeperAssess: false,
+     entitlements: "entitlements.mac.plist",
+     entitlementsInherit: "entitlements.mac.plist",
+   },
+   dmg: { sign: true },
+   ```
+   Then run `npm run build`.
+3. Or sign a build you already packaged, by hand:
+   ```bash
+   codesign --force --deep --options runtime \
+     --entitlements entitlements.mac.plist \
+     --sign "Developer ID Application: Your Name (TEAMID)" \
+     "release/<version>/mac/DAWLab.app"
+   codesign --verify --deep --strict --verbose=2 "release/<version>/mac/DAWLab.app"
+   ```
+4. **Notarize** so other machines don't warn (requires an app-specific password or API key):
+   ```bash
+   xcrun notarytool submit "DAWLab-Mac-arm64-<version>-Installer.dmg" \
+     --apple-id you@example.com --team-id TEAMID --password <app-specific-password> --wait
+   xcrun stapler staple "DAWLab-Mac-arm64-<version>-Installer.dmg"
+   ```
+
+### Windows
+
+Unsigned installers trigger a **SmartScreen** warning. To run anyway: click **More info** → **Run anyway**.
+
+To sign it yourself you need a code-signing certificate (`.pfx`). Sign the packaged `.exe` with `signtool` from the Windows SDK:
+
+```powershell
+signtool sign /fd SHA256 /f certificate.pfx /p <password> ^
+  /tr http://timestamp.digicert.com /td SHA256 ^
+  "release\<version>\DAWLab-Windows-x64-<version>-Setup.exe"
+```
+
+Or let electron-builder sign automatically by setting `CSC_LINK` (path/URL to the `.pfx`) and `CSC_KEY_PASSWORD` before running `npm run build`.
+
+### Linux
+
+No signing required. Make the AppImage executable and run it:
+
+```bash
+chmod +x release/<version>/DAWLab-Linux-<version>.AppImage
+./release/<version>/DAWLab-Linux-<version>.AppImage
+```
+
+---
+
 ## Development
 
 ### Scripts
