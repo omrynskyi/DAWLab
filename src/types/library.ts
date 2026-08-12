@@ -32,3 +32,17 @@ export type Folder = {
     position: number;
     parentId?: string | null;
 };
+
+// A user-imported audio file (bounce or reference) shown in the Library alongside
+// projects and folders. Not a DAWVCS project — copied into managed storage and
+// played inline. Mirrors the AudioItem shape persisted in the Electron config.
+export type AudioItem = {
+    id: string;
+    name: string;
+    fileName: string;
+    filePath: string;
+    ext: string;
+    folderId?: string | null;
+    position: number;
+    addedAt: string;
+};

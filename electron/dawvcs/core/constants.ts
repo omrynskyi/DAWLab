@@ -155,6 +155,9 @@ export const getUserDir = (username?: string) => path.join(VCS_DIR, 'users', use
 export const getRegistryFile = (username?: string) => path.join(getUserDir(username), 'registry.json');
 export const getCommitsDir = (username?: string) => path.join(getUserDir(username), 'commits');
 export const getLogsDir = (username?: string) => path.join(getUserDir(username), 'logs');
+// Managed copies of user-imported audio files (bounces / references) that are not
+// DAWVCS projects. Each item lives in its own subdirectory: media/<id>/<fileName>.
+export const getUserMediaDir = (username?: string) => path.join(getUserDir(username), 'media');
 
 // DEPRECATED: These will be removed once refactoring is complete
 export const REGISTRY_FILE = path.join(VCS_DIR, 'registry.json');

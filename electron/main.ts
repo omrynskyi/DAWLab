@@ -39,6 +39,7 @@ import {
   getUsername,
   VCS_DIR,
   getRegistryFile,
+  getUserMediaDir,
   HOME,
   getSuggestedUsername,
   hasCompletedOnboarding,
@@ -47,6 +48,7 @@ import {
   deleteUser,
   clearPersistedUser,
 } from "./dawvcs/core/constants";
+import type { AudioItem } from "./dawvcs/core/config";
 import { getCasPath, calculateCasSize } from "./dawvcs/core/cas";
 import { getProjectPath } from "./dawvcs/core/registry";
 import { saveProjectLog } from "./dawvcs/core/log";
@@ -62,6 +64,10 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Audio file extensions accepted for Library audio items (bounces / references).
+// Lowercase, with leading dot — matched against path.extname().toLowerCase().
+const AUDIO_EXTENSIONS = [".wav", ".mp3", ".aif", ".aiff", ".flac", ".m4a", ".ogg"];
 
 // Register custom protocol as privileged for audio streaming
 protocol.registerSchemesAsPrivileged([
@@ -349,6 +355,20 @@ ipcMain.handle("pick-files", async () => {
         extensions: ["wav", "mp3", "aiff", "flac", "m4a"],
       },
       { name: "All Files", extensions: ["*"] },
+    ],
+  });
+  return result.filePaths;
+});
+
+// Audio-only file picker for importing bounces / references into the Library.
+ipcMain.handle("pick-audio-files", async () => {
+  const result = await dialog.showOpenDialog(win!, {
+    properties: ["openFile", "multiSelections"],
+    filters: [
+      {
+        name: "Audio Files",
+        extensions: AUDIO_EXTENSIONS.map((e) => e.replace(/^\./, "")),
+      },
     ],
   });
   return result.filePaths;
@@ -1355,6 +1375,122 @@ ipcMain.handle(
 ipcMain.handle("clear-folder-cache", () => {
   clearUserConfigCache();
   return { success: true };
+});
+
+// =======================
+// Audio Library (bounces / references)
+// =======================
+
+// Sanitize a basename for safe use on disk while keeping it recognizable.
+const sanitizeAudioFileName = (name: string): string =>
+  name.replace(/[/\\?%*:|"<>]/g, "_").replace(/\s+/g, " ").trim() || "audio";
+
+// Get all imported audio items for the active user
+ipcMain.handle("get-audio-items", async () => {
+  try {
+    const manager = getUserConfigManager(getUsername());
+    return manager.getAudioItems();
+  } catch (err) {
+    console.error("[main.ts] Error getting audio items:", err);
+    return [];
+  }
+});
+
+// Import one or more audio files into the Library: each is copied into managed
+// storage (media/<id>/<fileName>) so playback survives the original moving.
+ipcMain.handle(
+  "import-audio-files",
+  async (_ev, sourcePaths: string[], folderId: string | null = null) => {
+    const username = getUsername();
+    const manager = getUserConfigManager(username);
+    const mediaDir = getUserMediaDir(username);
+    const created: AudioItem[] = [];
+
+    for (const sourcePath of sourcePaths || []) {
+      try {
+        if (!fs.existsSync(sourcePath)) continue;
+        const ext = path.extname(sourcePath).toLowerCase();
+        if (!AUDIO_EXTENSIONS.includes(ext)) continue;
+
+        const id = `audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const baseName = sanitizeAudioFileName(path.basename(sourcePath));
+        const itemDir = path.join(mediaDir, id);
+        fs.mkdirSync(itemDir, { recursive: true });
+        const destPath = path.join(itemDir, baseName);
+        fs.copyFileSync(sourcePath, destPath);
+
+        const item: AudioItem = {
+          id,
+          name: path.basename(baseName, path.extname(baseName)),
+          fileName: baseName,
+          filePath: destPath,
+          ext,
+          folderId,
+          position: manager.getAudioItems().length,
+          addedAt: new Date().toISOString(),
+        };
+        manager.addAudioItem(item);
+        created.push(item);
+      } catch (err) {
+        console.error(`[main.ts] Error importing audio file ${sourcePath}:`, err);
+      }
+    }
+    return created;
+  },
+);
+
+// Resolve an audio item to a dawpreview:// URL the renderer can stream/play.
+ipcMain.handle("get-audio-url", async (_ev, id: string) => {
+  const manager = getUserConfigManager(getUsername());
+  const item = manager.getAudioItems().find((a) => a.id === id);
+  if (!item) return null;
+  const fullPath = item.filePath;
+  return `dawpreview://active${fullPath.startsWith("/") ? "" : "/"}${fullPath}`;
+});
+
+// Delete an audio item: remove the config entry and its copied file on disk.
+ipcMain.handle("delete-audio-item", async (_ev, id: string) => {
+  try {
+    const username = getUsername();
+    const manager = getUserConfigManager(username);
+    const item = manager.getAudioItems().find((a) => a.id === id);
+    manager.removeAudioItem(id);
+    if (item) {
+      const itemDir = path.join(getUserMediaDir(username), id);
+      fs.rmSync(itemDir, { recursive: true, force: true });
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("[main.ts] Error deleting audio item:", err);
+    throw err;
+  }
+});
+
+// Move an audio item to a folder (or root if folderId is null)
+ipcMain.handle(
+  "move-audio-item-to-folder",
+  async (_ev, id: string, folderId: string | null) => {
+    try {
+      const manager = getUserConfigManager(getUsername());
+      manager.moveAudioItem(id, folderId);
+      return { success: true };
+    } catch (err) {
+      console.error("[main.ts] Error moving audio item:", err);
+      throw err;
+    }
+  },
+);
+
+// Rename an audio item's display name
+ipcMain.handle("rename-audio-item", async (_ev, id: string, name: string) => {
+  try {
+    const manager = getUserConfigManager(getUsername());
+    manager.renameAudioItem(id, name);
+    return { success: true };
+  } catch (err) {
+    console.error("[main.ts] Error renaming audio item:", err);
+    throw err;
+  }
 });
 
 // ============================

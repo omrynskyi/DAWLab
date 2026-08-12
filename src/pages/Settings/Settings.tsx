@@ -206,7 +206,7 @@ export const Settings: React.FC = () => {
   return (
     <div className="settings-page">
       <div className="settings-header">
-        <button onClick={() => navigate('/')} className="btn-icon back-btn" title="Back to Library">
+        <button onClick={() => navigate(-1)} className="btn-icon back-btn" title="Back">
           <ArrowLeft size={24} />
         </button>
         <h1 className="settings-title">Settings</h1>

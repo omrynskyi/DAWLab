@@ -15,9 +15,28 @@ export interface Folder {
   expanded?: boolean;
 }
 
+/**
+ * A user-imported audio file (a bounce or reference track) that lives in the
+ * Library alongside projects and folders. Unlike projects, audio items are not
+ * tracked by DAWVCS — no commits, registry, or metadata. The file is copied into
+ * managed storage (media/<id>/<fileName>) so playback survives the original
+ * being moved or deleted.
+ */
+export interface AudioItem {
+  id: string;
+  name: string;
+  fileName: string;
+  filePath: string;
+  ext: string;
+  folderId: string | null;
+  position: number;
+  addedAt: string;
+}
+
 export interface UserConfigData {
   folders: Folder[];
   projectFolderMap: Record<string | number, string | null>;
+  audioItems: AudioItem[];
   warningPreferences?: Record<string, boolean>; // Key: warning type, Value: don't show again
   casStorageLimit?: number | null; // CAS storage limit in bytes, null = unlimited
   casDirectory?: string; // Future: custom CAS directory path
@@ -43,7 +62,7 @@ export class UserConfigManager {
 
   private load(): UserConfigData {
     if (!fs.existsSync(this.filePath)) {
-      return { folders: [], projectFolderMap: {} };
+      return { folders: [], projectFolderMap: {}, audioItems: [] };
     }
 
     try {
@@ -51,6 +70,7 @@ export class UserConfigManager {
       return {
         folders: raw.folders || [],
         projectFolderMap: raw.projectFolderMap || {},
+        audioItems: raw.audioItems || [],
         warningPreferences: raw.warningPreferences || {},
         casStorageLimit: raw.casStorageLimit || null,
         casDirectory: raw.casDirectory || undefined,
@@ -58,7 +78,7 @@ export class UserConfigManager {
       };
     } catch (err) {
       console.error('[UserConfigManager] Error loading config:', err);
-      return { folders: [], projectFolderMap: {}, warningPreferences: {} };
+      return { folders: [], projectFolderMap: {}, audioItems: [], warningPreferences: {} };
     }
   }
 
@@ -108,6 +128,13 @@ export class UserConfigManager {
     Object.keys(this.data.projectFolderMap).forEach(projectId => {
       if (this.data.projectFolderMap[projectId] === folderId) {
         this.data.projectFolderMap[projectId] = null;
+      }
+    });
+
+    // Move all audio items in this folder to root
+    this.data.audioItems.forEach(item => {
+      if (item.folderId === folderId) {
+        item.folderId = null;
       }
     });
 
@@ -187,6 +214,52 @@ export class UserConfigManager {
     return Object.entries(this.data.projectFolderMap)
       .filter(([_, folder]) => folder === folderId)
       .map(([projectId]) => isNaN(Number(projectId)) ? projectId : Number(projectId));
+  }
+
+  // ---- Audio Item Operations ----
+
+  /** Get all audio items (bounces / references) */
+  getAudioItems(): AudioItem[] {
+    return this.data.audioItems;
+  }
+
+  /** Add an audio item to the library */
+  addAudioItem(item: AudioItem): void {
+    this.data.audioItems.push(item);
+    this.save();
+  }
+
+  /** Remove an audio item by id */
+  removeAudioItem(id: string): boolean {
+    const index = this.data.audioItems.findIndex(a => a.id === id);
+    if (index === -1) return false;
+    this.data.audioItems.splice(index, 1);
+    this.save();
+    return true;
+  }
+
+  /** Move an audio item to a folder (or root if folderId is null) */
+  moveAudioItem(id: string, folderId: string | null): boolean {
+    const item = this.data.audioItems.find(a => a.id === id);
+    if (!item) return false;
+    item.folderId = folderId;
+    this.save();
+    return true;
+  }
+
+  /** Rename an audio item's display name */
+  renameAudioItem(id: string, newName: string): boolean {
+    const item = this.data.audioItems.find(a => a.id === id);
+    if (!item) return false;
+    item.name = newName;
+    this.save();
+    return true;
+  }
+
+  /** Replace all audio items (used for full sync from UI, e.g. reordering) */
+  setAudioItems(items: AudioItem[]): void {
+    this.data.audioItems = items;
+    this.save();
   }
 
   // ---- Bulk Operations ----

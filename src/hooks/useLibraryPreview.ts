@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Project } from '@/types/library';
+import type { Project, AudioItem } from '@/types/library';
 
 /**
  * Owns a single shared <audio> element for auditioning project previews from the
@@ -61,14 +61,16 @@ export function useLibraryPreview() {
     setLoadingId(null);
   }, []);
 
-  const toggle = useCallback(async (project: Project) => {
-    if (!project.hasPreview || !project.latestCommitId || !project.previewFile) return;
-
+  // Core play/stop toggle for any source, keyed by a stable id. The URL is
+  // resolved lazily (only when actually starting a new source) via `resolveUrl`,
+  // so the same robust, event-driven state machine serves both project previews
+  // and imported audio items through one shared element — only one plays at a time.
+  const toggleSource = useCallback(async (id: string, resolveUrl: () => Promise<string>) => {
     const el = getAudio();
 
     // Decide from the element's LIVE state, not React state — immune to stale
     // closures, batched renders, and clicks that arrive between renders.
-    const isCurrent = currentIdRef.current === project.id;
+    const isCurrent = currentIdRef.current === id;
     const isPlaying = isCurrent && !el.paused && !el.ended;
 
     if (isPlaying) {
@@ -80,22 +82,17 @@ export function useLibraryPreview() {
     const token = ++tokenRef.current;
     try {
       if (!isCurrent) {
-        // Switching projects: stop the old one and load the new src. A fresh src
+        // Switching sources: stop the old one and load the new src. A fresh src
         // starts at 0, and seeking before it loads would break play(), so we don't
         // touch currentTime here.
-        setLoadingId(project.id);
+        setLoadingId(id);
         el.pause();
-        const url: string = await window.ipcRenderer.invoke(
-          'get-preview-url',
-          project.name,
-          project.latestCommitId,
-          project.previewFile,
-        );
+        const url = await resolveUrl();
         if (token !== tokenRef.current) return; // superseded while resolving
         el.src = url;
-        currentIdRef.current = project.id;
+        currentIdRef.current = id;
       } else {
-        // Same project already loaded (after stop or after it ended): just rewind.
+        // Same source already loaded (after stop or after it ended): just rewind.
         // Re-assigning the same src would reload and abort the play() below.
         el.currentTime = 0;
       }
@@ -109,12 +106,30 @@ export function useLibraryPreview() {
       // playingId / loadingId are updated by the element's play/playing events.
     } catch (err) {
       if (token === tokenRef.current) {
-        console.error('[useLibraryPreview] Failed to play preview:', err);
+        console.error('[useLibraryPreview] Failed to play source:', err);
         setPlayingId(null);
         setLoadingId(null);
       }
     }
   }, [getAudio, stop]);
+
+  // Play/stop a project's latest-commit audio preview.
+  const toggle = useCallback((project: Project) => {
+    if (!project.hasPreview || !project.latestCommitId || !project.previewFile) return;
+    return toggleSource(project.id, () =>
+      window.ipcRenderer.invoke(
+        'get-preview-url',
+        project.name,
+        project.latestCommitId,
+        project.previewFile,
+      ),
+    );
+  }, [toggleSource]);
+
+  // Play/stop an imported audio item (bounce / reference).
+  const toggleAudio = useCallback((item: AudioItem) => {
+    return toggleSource(item.id, () => window.ipcRenderer.invoke('get-audio-url', item.id));
+  }, [toggleSource]);
 
   // Tear down the audio element on unmount. The hook's refs are discarded with the
   // instance, so a remount always starts from a clean element and empty state.
@@ -128,5 +143,5 @@ export function useLibraryPreview() {
     };
   }, []);
 
-  return { playingId, loadingId, toggle, stop };
+  return { playingId, loadingId, toggle, toggleAudio, stop };
 }

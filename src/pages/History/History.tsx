@@ -100,6 +100,16 @@ export const History: React.FC = () => {
     location.state?.openSettings === true,
   );
 
+  // Back navigation: from project settings, step back to the project view;
+  // otherwise return to the library (which restores the folder you came from).
+  const handleBack = () => {
+    if (showSettings) {
+      setShowSettings(false);
+      return;
+    }
+    navigate("/");
+  };
+
   // Unsaved Changes Warning State
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [pendingCheckoutId, setPendingCheckoutId] = useState<string | null>(
@@ -1364,13 +1374,14 @@ export const History: React.FC = () => {
       <div className="px-6 py-2 mb-2 relative z-10 bg-transparent flex flex-col min-[900px]:flex-row items-center gap-4 min-[900px]:gap-0 min-[900px]:justify-between">
         {/* Left: Back + Logo + Project Name */}
         <div className="flex items-center gap-4 shrink-0 flex-1 min-w-[200px] justify-center min-[900px]:justify-start w-full min-[900px]:w-auto">
-          <Link
-            to="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity no-underline text-white"
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity no-underline text-white bg-transparent border-0 p-0 cursor-pointer"
           >
             <ChevronLeft size={24} className="text-gray-400" />
             <img src={logo} alt="DAWLab" className="w-8 h-8 rounded-lg" />
-          </Link>
+          </button>
           <div className="flex flex-col">
             <h2 className="flex items-center m-0 leading-tight">
               <span className="text-white text-xl font-bold">

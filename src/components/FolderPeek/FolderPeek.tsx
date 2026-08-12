@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { Music, FolderOpen } from 'lucide-react';
+import { Music, FolderOpen, AudioLines } from 'lucide-react';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import type { Project, Folder } from '@/types/library';
+import type { Project, Folder, AudioItem } from '@/types/library';
 import './FolderPeek.css';
 
 interface FolderPeekProps {
@@ -10,6 +10,8 @@ interface FolderPeekProps {
   projects: Project[];
   /** Direct child subfolders of this folder. */
   subfolders: Folder[];
+  /** Direct child audio items (bounces / references) of this folder. */
+  audioItems?: AudioItem[];
   /** Resolve a DAW name to its logo asset (null → generic icon). */
   getIcon: (daw?: string) => string | null;
   /** Bounding rect of the folder tile that was clicked, used to position the peek. */
@@ -17,6 +19,8 @@ interface FolderPeekProps {
   onOpenProject: (id: string, name: string) => void;
   onEnterFolder: (id: string) => void;
   onEnterSubfolder: (id: string) => void;
+  /** Audition an audio item in place (optional). */
+  onPlayAudio?: (item: AudioItem) => void;
   onClose: () => void;
 }
 
@@ -31,11 +35,13 @@ export const FolderPeek: React.FC<FolderPeekProps> = ({
   folder,
   projects,
   subfolders,
+  audioItems = [],
   getIcon,
   anchorRect,
   onOpenProject,
   onEnterFolder,
   onEnterSubfolder,
+  onPlayAudio,
   onClose,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -56,11 +62,12 @@ export const FolderPeek: React.FC<FolderPeekProps> = ({
     setPos({ left, top });
   }, [anchorRect]);
 
-  // Subfolders first, then projects, capped at 9 (iOS shows 9 on the second page).
+  // Subfolders first, then projects, then audio, capped at 9 (iOS shows 9 on the second page).
   const folderItems = subfolders.map(f => ({ kind: 'folder' as const, item: f }));
   const projectItems = projects.map(p => ({ kind: 'project' as const, item: p }));
-  const items = [...folderItems, ...projectItems].slice(0, MAX_PEEK_ITEMS);
-  const overflow = subfolders.length + projects.length - items.length;
+  const audioItemsList = audioItems.map(a => ({ kind: 'audio' as const, item: a }));
+  const items = [...folderItems, ...projectItems, ...audioItemsList].slice(0, MAX_PEEK_ITEMS);
+  const overflow = subfolders.length + projects.length + audioItems.length - items.length;
   const isEmpty = items.length === 0;
 
   return (
@@ -96,6 +103,18 @@ export const FolderPeek: React.FC<FolderPeekProps> = ({
               >
                 <span className="folder-peek-item-icon folder-peek-item-subfolder">
                   <FolderOpen size={22} />
+                </span>
+                <span className="folder-peek-item-name">{item.name}</span>
+              </button>
+            ) : kind === 'audio' ? (
+              <button
+                key={`a-${item.id}`}
+                className="folder-peek-item"
+                onClick={() => onPlayAudio?.(item)}
+                title={item.name}
+              >
+                <span className="folder-peek-item-icon">
+                  <AudioLines size={22} />
                 </span>
                 <span className="folder-peek-item-name">{item.name}</span>
               </button>

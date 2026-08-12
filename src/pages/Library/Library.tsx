@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Library.css';
-import { Plus, FolderPlus, Search, LayoutGrid, List, Music, User, Loader2, ArrowUpRight, FileMusic, Filter, X, Play, Square } from 'lucide-react';
+import { Plus, FolderPlus, Search, LayoutGrid, List, Music, User, Loader2, ArrowUpRight, FileMusic, Filter, X, Play, Square, AudioLines, Pencil, Trash2 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import logicLogo from '@/assets/logic_logo.png';
 import abletonLogo from '@/assets/ableton_live_logo.png';
@@ -20,7 +20,7 @@ import { TagChip } from '@/components/ui/TagChip';
 import { TagManagerPopover } from '@/components/TagManagerPopover/TagManagerPopover';
 import { Tag } from 'lucide-react';
 
-import type { Project, Folder } from '@/types/library';
+import type { Project, Folder, AudioItem } from '@/types/library';
 import {
   collectFacets,
   projectMatchesFacets,
@@ -46,12 +46,20 @@ const DAW_LABEL_TO_TYPE: Record<string, DawType> = {
   'Pro Tools': 'protools',
 };
 
+// Audio extensions accepted on drop and imported as Library audio items. Kept in
+// sync with the main-process AUDIO_EXTENSIONS list.
+const AUDIO_DROP_EXTENSIONS = ['.wav', '.mp3', '.aif', '.aiff', '.flac', '.m4a', '.ogg'];
+
 // Default project name from a dropped path: the folder/file basename with any
 // known DAW project extension stripped ("Song.flp" -> "Song").
 const deriveProjectName = (p: string): string => {
   const base = p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
   return base.replace(/\.(logicx|flp|als|rpp|ptx)$/i, '');
 };
+
+// Session-scoped key remembering which folder the library is currently showing,
+// so navigating away to a project and back restores that folder.
+const CURRENT_FOLDER_KEY = 'dawlab-current-folder';
 
 export const Library: React.FC = () => {
   // ----------- Hooks & State -----------
@@ -68,6 +76,8 @@ export const Library: React.FC = () => {
   // Data State
   const [projects, setProjects] = useState<Project[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  // Imported audio files (bounces / references) shown alongside projects/folders.
+  const [audioItems, setAudioItems] = useState<AudioItem[]>([]);
   const rawProjectsRef = useRef<any[]>([]);
 
 
@@ -84,10 +94,14 @@ export const Library: React.FC = () => {
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
   // Navigation State
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  // Restored from the session so returning from a project (via the back button)
+  // reopens the folder you were browsing instead of dropping you at the root.
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(
+    () => sessionStorage.getItem(CURRENT_FOLDER_KEY) || null
+  );
 
   // Context Menu State
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'folder' | 'empty' | 'project'; folderId?: string; projectId?: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'folder' | 'empty' | 'project' | 'audio'; folderId?: string; projectId?: string; audioId?: string } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
   // Tag Manager Popover State
@@ -98,7 +112,7 @@ export const Library: React.FC = () => {
   const folderClickTimer = useRef<number | null>(null);
 
   // Drag and Drop State
-  const [draggedItem, setDraggedItem] = useState<{ type: 'project' | 'folder'; id: string } | null>(null);
+  const [draggedItem, setDraggedItem] = useState<{ type: 'project' | 'folder' | 'audio'; id: string } | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
   // OS file drag-and-drop: dropping a folder/file from Finder onto the library
@@ -111,12 +125,17 @@ export const Library: React.FC = () => {
   const [dropInit, setDropInit] = useState<{ path: string; name: string; daw: DawType; folderId: string | null } | null>(null);
 
   // Unified ordered list for rendering (enables free-form reordering)
-  const [viewOrder, setViewOrder] = useState<Array<{ kind: 'folder' | 'project'; id: string }>>([]);
+  const [viewOrder, setViewOrder] = useState<Array<{ kind: 'folder' | 'project' | 'audio'; id: string }>>([]);
 
   // Rename modal state
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [renameValue, setRenameValue] = useState('');
+
+  // Audio rename modal state (separate from folder rename)
+  const [showAudioRenameModal, setShowAudioRenameModal] = useState(false);
+  const [audioToRename, setAudioToRename] = useState<AudioItem | null>(null);
+  const [audioRenameValue, setAudioRenameValue] = useState('');
 
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -154,8 +173,9 @@ export const Library: React.FC = () => {
     localStorage.setItem(HANDLED_MOD_TIMES_KEY, JSON.stringify([...handledModTimes]));
   }, [handledModTimes]);
 
-  // Inline audio preview (single shared player, one project at a time)
-  const { playingId, loadingId, toggle: togglePreview, stop: stopPreview } = useLibraryPreview();
+  // Inline audio preview (single shared player, one item at a time — projects and
+  // imported audio share the same element, so only one ever plays).
+  const { playingId, loadingId, toggle: togglePreview, toggleAudio, stop: stopPreview } = useLibraryPreview();
 
   // Tag state
   const [tagColors, setTagColors] = useState<Record<string, string>>({});
@@ -221,6 +241,10 @@ export const Library: React.FC = () => {
         };
       });
       setProjects(convertedProjects);
+
+      // Imported audio items (bounces / references) live in the user config.
+      const audio: AudioItem[] = await window.ipcRenderer.invoke('get-audio-items').catch(() => []);
+      setAudioItems((audio || []).map((a, i) => ({ ...a, position: a.position ?? i })));
     } catch (err) {
       console.error('[Library] Error loading projects:', err);
     }
@@ -289,6 +313,21 @@ export const Library: React.FC = () => {
   // Stop any playing preview when the visible folder changes.
   useEffect(() => { stopPreview(); }, [currentFolderId, stopPreview]);
 
+  // Persist the open folder so the back button can restore it on return.
+  useEffect(() => {
+    if (currentFolderId) sessionStorage.setItem(CURRENT_FOLDER_KEY, currentFolderId);
+    else sessionStorage.removeItem(CURRENT_FOLDER_KEY);
+  }, [currentFolderId]);
+
+  // If the restored folder no longer exists (deleted, or a different user's
+  // session), fall back to the root rather than showing an empty view.
+  useEffect(() => {
+    if (loading) return;
+    if (currentFolderId && !folders.some(f => f.id === currentFolderId)) {
+      setCurrentFolderId(null);
+    }
+  }, [loading, folders, currentFolderId]);
+
   const enterFolder = useCallback((folderId: string) => {
     if (folderClickTimer.current) {
       window.clearTimeout(folderClickTimer.current);
@@ -354,6 +393,12 @@ export const Library: React.FC = () => {
     return parts.length ? parts.join(' · ') : `${p.daw} Project`;
   };
 
+  // Compact meta line for an audio item card, e.g. "Audio · WAV".
+  const audioMetaLine = (a: AudioItem): string => {
+    const ext = (a.ext || '').replace(/^\./, '').toUpperCase();
+    return ext ? `Audio · ${ext}` : 'Audio';
+  };
+
   const getProjectIcon = (daw?: string) => {
     if (daw === 'Logic Pro X' || daw === 'Logic Pro') return logicLogo;
     if (daw === 'Ableton Live' || daw === 'Ableton') return abletonLogo;
@@ -413,6 +458,12 @@ export const Library: React.FC = () => {
     setContextMenu({ x: e.clientX, y: e.clientY, type: 'project', projectId });
   };
 
+  const handleAudioContextMenu = (e: React.MouseEvent, audioId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, type: 'audio', audioId });
+  };
+
   const handleTagPopoverAdd = (projectId: string, tag: string, color: string) => {
     // Deduplicate
     const project = projects.find(p => p.id === projectId);
@@ -450,7 +501,7 @@ export const Library: React.FC = () => {
   // Drag and Drop Handlers
   // =======================
 
-  const handleDragStart = (e: React.DragEvent, type: 'project' | 'folder', id: string) => {
+  const handleDragStart = (e: React.DragEvent, type: 'project' | 'folder' | 'audio', id: string) => {
     setDraggedItem({ type, id });
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -464,7 +515,7 @@ export const Library: React.FC = () => {
     return false;
   };
 
-  const handleDragEnterItem = (targetId: string, targetKind: 'folder' | 'project') => {
+  const handleDragEnterItem = (targetId: string, targetKind: 'folder' | 'project' | 'audio') => {
     if (!draggedItem) return;
     if (draggedItem.id === targetId && draggedItem.type === targetKind) return;
     if (targetKind === 'folder') {
@@ -500,6 +551,9 @@ export const Library: React.FC = () => {
     if (draggedItem.type === 'project') {
       setProjects(prev => prev.map(p => p.id === draggedItem.id ? { ...p, folderId: targetFolderId } : p));
       window.ipcRenderer.invoke('move-project-to-folder', draggedItem.id, targetFolderId);
+    } else if (draggedItem.type === 'audio') {
+      setAudioItems(prev => prev.map(a => a.id === draggedItem.id ? { ...a, folderId: targetFolderId } : a));
+      window.ipcRenderer.invoke('move-audio-item-to-folder', draggedItem.id, targetFolderId);
     } else {
       setFolders(prev => prev.map(f => f.id === draggedItem.id ? { ...f, parentId: targetFolderId } : f));
       window.ipcRenderer.invoke('move-folder', draggedItem.id, targetFolderId);
@@ -523,6 +577,11 @@ export const Library: React.FC = () => {
     setProjects(prev => prev.map(p => {
       const idx = viewOrder.findIndex(item => item.kind === 'project' && item.id === p.id);
       return idx >= 0 ? { ...p, position: idx } : p;
+    }));
+
+    setAudioItems(prev => prev.map(a => {
+      const idx = viewOrder.findIndex(item => item.kind === 'audio' && item.id === a.id);
+      return idx >= 0 ? { ...a, position: idx } : a;
     }));
   };
 
@@ -584,23 +643,47 @@ export const Library: React.FC = () => {
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
 
-    const droppedPath = window.electronAPI?.getPathForFile?.(files[0]);
-    if (!droppedPath) {
+    const paths = files
+      .map(f => window.electronAPI?.getPathForFile?.(f))
+      .filter((p): p is string => !!p);
+    if (paths.length === 0) {
       flashDropError('Could not read the dropped item');
       return;
     }
+
+    // Split the drop into audio files (imported as audio items) and everything
+    // else (handed to the existing DAW-project detection flow).
+    const isAudioPath = (p: string) =>
+      AUDIO_DROP_EXTENSIONS.includes(p.slice(p.lastIndexOf('.')).toLowerCase());
+    const audioPaths = paths.filter(isAudioPath);
+    const otherPaths = paths.filter(p => !isAudioPath(p));
+
+    if (audioPaths.length > 0) {
+      try {
+        await window.ipcRenderer.invoke('import-audio-files', audioPaths, currentFolderId);
+        loadMyProjects();
+      } catch (err) {
+        console.error('[Library] Failed to import dropped audio:', err);
+        flashDropError('Could not import audio');
+      }
+    }
+
+    // The first non-audio item is treated as a potential DAW project.
+    if (otherPaths.length === 0) return;
+    const droppedPath = otherPaths[0];
 
     let result: { daw?: string; isValid?: boolean } | undefined;
     try {
       result = await window.ipcRenderer.invoke('detect-daw', droppedPath);
     } catch (err) {
       console.error('[Library] detect-daw failed for dropped item:', err);
-      flashDropError('Could not read the dropped item');
+      if (audioPaths.length === 0) flashDropError('Could not read the dropped item');
       return;
     }
 
     if (!result?.isValid) {
-      flashDropError('Not a DAW project');
+      // Stay quiet if we already imported audio from the same drop.
+      if (audioPaths.length === 0) flashDropError('Not a DAW project or audio file');
       return;
     }
 
@@ -643,7 +726,8 @@ export const Library: React.FC = () => {
     const folder = folders.find(f => f.id === folderId);
     const hasProjects = projects.some(p => p.folderId === folderId);
     const hasSubfolders = folders.some(f => f.parentId === folderId);
-    if (hasProjects || hasSubfolders) {
+    const hasAudio = audioItems.some(a => a.folderId === folderId);
+    if (hasProjects || hasSubfolders || hasAudio) {
       alert('Cannot delete folder that contains items. Move or delete its contents first.');
       return;
     }
@@ -661,6 +745,48 @@ export const Library: React.FC = () => {
     window.ipcRenderer.invoke('delete-folder', id);
     setShowDeleteConfirm(false);
     setFolderToDelete(null);
+  };
+
+  // =======================
+  // Audio Items (bounces / references)
+  // =======================
+
+  // Open the audio-only file picker, copy the chosen files into managed storage,
+  // and drop them into the current folder.
+  const handleAddAudio = async () => {
+    setShowAddMenu(false);
+    try {
+      const paths: string[] = await window.ipcRenderer.invoke('pick-audio-files');
+      if (!paths || paths.length === 0) return;
+      await window.ipcRenderer.invoke('import-audio-files', paths, currentFolderId);
+      loadMyProjects();
+    } catch (err) {
+      console.error('[Library] Failed to add audio:', err);
+    }
+  };
+
+  const initiateAudioRename = (audioId: string) => {
+    const a = audioItems.find(x => x.id === audioId);
+    if (!a) return;
+    setAudioToRename(a);
+    setAudioRenameValue(a.name);
+    setShowAudioRenameModal(true);
+  };
+
+  const handleAudioRenameSubmit = () => {
+    if (!audioToRename || !audioRenameValue.trim()) return;
+    const newName = audioRenameValue.trim();
+    setAudioItems(prev => prev.map(a => a.id === audioToRename.id ? { ...a, name: newName } : a));
+    window.ipcRenderer.invoke('rename-audio-item', audioToRename.id, newName).catch(() => {});
+    setShowAudioRenameModal(false);
+    setAudioToRename(null);
+    setAudioRenameValue('');
+  };
+
+  const handleDeleteAudio = (audioId: string) => {
+    if (playingId === audioId) stopPreview();
+    setAudioItems(prev => prev.filter(a => a.id !== audioId));
+    window.ipcRenderer.invoke('delete-audio-item', audioId).catch(() => {});
   };
 
   const getContextMenuItems = (): ContextMenuItem[] => {
@@ -683,16 +809,42 @@ export const Library: React.FC = () => {
         },
       ];
     }
+    if (contextMenu.type === 'audio') {
+      const audioId = contextMenu.audioId!;
+      return [
+        {
+          label: playingId === audioId ? 'Stop' : 'Play',
+          icon: playingId === audioId ? <Square size={14} /> : <Play size={14} />,
+          onClick: () => {
+            const a = audioItems.find(x => x.id === audioId);
+            if (a) toggleAudio(a);
+            setContextMenu(null);
+          },
+        },
+        {
+          label: 'Rename',
+          icon: <Pencil size={14} />,
+          onClick: () => { initiateAudioRename(audioId); setContextMenu(null); },
+        },
+        {
+          label: 'Delete',
+          icon: <Trash2 size={14} />,
+          onClick: () => { handleDeleteAudio(audioId); setContextMenu(null); },
+        },
+      ];
+    }
     // empty space context menu
     return [
       { label: 'New Project', icon: <FileMusic size={14} />, onClick: () => { setShowNewProjectModal(true); setContextMenu(null); } },
       { label: 'New Folder', icon: <FolderPlus size={14} />, onClick: () => { setShowNewFolderModal(true); setContextMenu(null); } },
+      { label: 'Add Audio', icon: <AudioLines size={14} />, onClick: () => { setContextMenu(null); handleAddAudio(); } },
     ];
   };
 
   const currentListFolders = folders.filter(f => f.parentId === currentFolderId);
   const currentListProjects = projects.filter(p => p.folderId === currentFolderId);
-  const isLibraryEmpty = !loading && currentListFolders.length === 0 && currentListProjects.length === 0;
+  const currentListAudio = audioItems.filter(a => (a.folderId ?? null) === currentFolderId);
+  const isLibraryEmpty = !loading && currentListFolders.length === 0 && currentListProjects.length === 0 && currentListAudio.length === 0;
 
   // All facets across visible projects, grouped by type (for the filter panel).
   const visibleFacetGroups = useMemo(
@@ -727,6 +879,12 @@ export const Library: React.FC = () => {
     if (!normalizedQuery) return currentListFolders;
     return folders.filter(f => f.name.toLowerCase().includes(normalizedQuery));
   }, [folders, currentListFolders, normalizedQuery]);
+
+  // Audio items matched by name — searched across the whole library while a query is active.
+  const searchedAudioItems = useMemo(() => {
+    if (!normalizedQuery) return currentListAudio;
+    return audioItems.filter(a => a.name.toLowerCase().includes(normalizedQuery));
+  }, [audioItems, currentListAudio, normalizedQuery]);
 
   const toggleFacet = useCallback((key: string) => {
     setActiveFacets(prev => {
@@ -799,9 +957,10 @@ export const Library: React.FC = () => {
     const key = `dawlab-order-my-projects-${currentFolderId ?? 'root'}`;
     const saved: string[] = JSON.parse(localStorage.getItem(key) || 'null') ?? [];
 
-    const all: Array<{ kind: 'folder' | 'project'; id: string }> = [
+    const all: Array<{ kind: 'folder' | 'project' | 'audio'; id: string }> = [
       ...searchedFolders.sort((a, b) => a.position - b.position).map(f => ({ kind: 'folder' as const, id: f.id })),
       ...searchedProjects.sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).map(p => ({ kind: 'project' as const, id: p.id })),
+      ...searchedAudioItems.sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).map(a => ({ kind: 'audio' as const, id: a.id })),
     ];
 
     if (saved.length) {
@@ -814,7 +973,7 @@ export const Library: React.FC = () => {
       setViewOrder(all);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFolderId, loading, folders, projects, activeFacets, normalizedQuery]);
+  }, [currentFolderId, loading, folders, projects, audioItems, activeFacets, normalizedQuery]);
 
   // =======================
   // Render
@@ -836,8 +995,8 @@ export const Library: React.FC = () => {
         >
           <div className="library-drop-overlay-inner">
             <FileMusic size={48} />
-            <span className="library-drop-title">Drop to create a project</span>
-            <span className="library-drop-sub">Logic, Ableton, FL Studio, Reaper, or Pro Tools</span>
+            <span className="library-drop-title">Drop to add</span>
+            <span className="library-drop-sub">A DAW project, or an audio file (WAV, MP3, AIFF, FLAC, M4A)</span>
           </div>
         </div>
       )}
@@ -849,7 +1008,7 @@ export const Library: React.FC = () => {
           <div className="library-drop-overlay-inner">
             <X size={48} />
             <span className="library-drop-title">{dropError}</span>
-            <span className="library-drop-sub">Drop a Logic, Ableton, FL Studio, Reaper, or Pro Tools project</span>
+            <span className="library-drop-sub">Drop a DAW project, or an audio file (WAV, MP3, AIFF, FLAC, M4A)</span>
           </div>
         </div>
       )}
@@ -977,6 +1136,10 @@ export const Library: React.FC = () => {
                 <button className="add-dropdown-item" onClick={() => { setShowNewFolderModal(true); setShowAddMenu(false); }}>
                   <FolderPlus size={14} />
                   New Folder
+                </button>
+                <button className="add-dropdown-item" onClick={handleAddAudio}>
+                  <AudioLines size={14} />
+                  Add Audio
                 </button>
               </div>
             )}
@@ -1109,9 +1272,14 @@ export const Library: React.FC = () => {
                       const folder = folders.find(f => f.id === id);
                       if (!folder) return null;
                       const childProjects = projects.filter(p => p.folderId === folder.id);
+                      const childAudio = audioItems.filter(a => a.folderId === folder.id);
                       const childSubfolders = folders.filter(f => f.parentId === folder.id);
-                      const childCount = childProjects.length + childSubfolders.length;
+                      const childCount = childProjects.length + childAudio.length + childSubfolders.length;
                       const isFolderEmpty = childCount === 0;
+                      const previewTiles: Array<{ kind: 'project'; daw?: string } | { kind: 'audio' }> = [
+                        ...childProjects.map(p => ({ kind: 'project' as const, daw: p.daw })),
+                        ...childAudio.map(() => ({ kind: 'audio' as const })),
+                      ];
                       return (
                         <div
                           key={`folder-${folder.id}`}
@@ -1130,14 +1298,18 @@ export const Library: React.FC = () => {
                           <div className="item-icon-wrapper folder-wrapper">
                              <div className="folder-peek-tile">
                                {Array.from({ length: 4 }).map((_, i) => {
-                                 const p = childProjects[i];
+                                 const t = previewTiles[i];
                                  return (
                                    <div key={i} className="folder-peek-slot">
-                                     {p ? (
-                                       getProjectIcon(p.daw) ? (
-                                         <img src={getProjectIcon(p.daw)!} alt={p.daw} />
+                                     {t ? (
+                                       t.kind === 'project' ? (
+                                         getProjectIcon(t.daw) ? (
+                                           <img src={getProjectIcon(t.daw)!} alt={t.daw} />
+                                         ) : (
+                                           <Music size={18} />
+                                         )
                                        ) : (
-                                         <Music size={18} />
+                                         <AudioLines size={18} />
                                        )
                                      ) : null}
                                    </div>
@@ -1149,6 +1321,42 @@ export const Library: React.FC = () => {
                           <span className="item-sublabel">
                             {isFolderEmpty ? 'Empty' : `${childCount} item${childCount === 1 ? '' : 's'}`}
                           </span>
+                        </div>
+                      );
+                    } else if (kind === 'audio') {
+                      const audio = audioItems.find(a => a.id === id);
+                      if (!audio) return null;
+                      return (
+                        <div
+                          key={`audio-${audio.id}`}
+                          className={`library-item project audio-item${draggedItem?.id === audio.id && draggedItem?.type === 'audio' ? ' dragging' : ''}${playingId === audio.id ? ' playing' : ''}`}
+                          draggable={true}
+                          onDragStart={(e) => handleDragStart(e, 'audio', audio.id)}
+                          onDragEnter={() => handleDragEnterItem(audio.id, 'audio')}
+                          onDragOver={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                          onDrop={(e) => { e.stopPropagation(); e.preventDefault(); saveViewOrder(); setDraggedItem(null); }}
+                          onDragEnd={handleDragEnd}
+                          onDoubleClick={() => toggleAudio(audio)}
+                          onContextMenu={(e) => handleAudioContextMenu(e, audio.id)}
+                        >
+                          <div className="item-icon-wrapper project-wrapper">
+                             <div className="audio-tile"><AudioLines size={40} /></div>
+                             <button
+                               className="item-preview-btn"
+                               onClick={(e) => { e.stopPropagation(); toggleAudio(audio); }}
+                               aria-label={playingId === audio.id ? 'Stop' : 'Play'}
+                             >
+                               {loadingId === audio.id ? (
+                                 <Loader2 size={18} className="animate-spin" />
+                               ) : playingId === audio.id ? (
+                                 <Square size={18} />
+                               ) : (
+                                 <Play size={18} />
+                               )}
+                             </button>
+                          </div>
+                          <span className="item-label">{audio.name}</span>
+                          <span className="item-sublabel">{audioMetaLine(audio)}</span>
                         </div>
                       );
                     } else {
@@ -1211,6 +1419,11 @@ export const Library: React.FC = () => {
                       const folder = folders.find(f => f.id === id);
                       if (!folder) return null;
                       const childProjects = projects.filter(p => p.folderId === folder.id);
+                      const childAudio = audioItems.filter(a => a.folderId === folder.id);
+                      const previewTiles: Array<{ kind: 'project'; daw?: string } | { kind: 'audio' }> = [
+                        ...childProjects.map(p => ({ kind: 'project' as const, daw: p.daw })),
+                        ...childAudio.map(() => ({ kind: 'audio' as const })),
+                      ];
                       return (
                         <div
                           key={`folder-${folder.id}`}
@@ -1228,14 +1441,18 @@ export const Library: React.FC = () => {
                           <div className="list-icon folder-wrapper">
                              <div className="folder-peek-tile">
                                {Array.from({ length: 4 }).map((_, i) => {
-                                 const p = childProjects[i];
+                                 const t = previewTiles[i];
                                  return (
                                    <div key={i} className="folder-peek-slot">
-                                     {p ? (
-                                       getProjectIcon(p.daw) ? (
-                                         <img src={getProjectIcon(p.daw)!} alt={p.daw} />
+                                     {t ? (
+                                       t.kind === 'project' ? (
+                                         getProjectIcon(t.daw) ? (
+                                           <img src={getProjectIcon(t.daw)!} alt={t.daw} />
+                                         ) : (
+                                           <Music size={14} />
+                                         )
                                        ) : (
-                                         <Music size={14} />
+                                         <AudioLines size={14} />
                                        )
                                      ) : null}
                                    </div>
@@ -1244,6 +1461,53 @@ export const Library: React.FC = () => {
                              </div>
                           </div>
                           <span className="list-name">{folder.name}</span>
+                        </div>
+                      );
+                    } else if (kind === 'audio') {
+                      const audio = audioItems.find(a => a.id === id);
+                      if (!audio) return null;
+                      return (
+                        <div
+                          key={`audio-${audio.id}`}
+                          className={`list-row${draggedItem?.id === audio.id && draggedItem?.type === 'audio' ? ' dragging' : ''}${playingId === audio.id ? ' playing' : ''}`}
+                          draggable={true}
+                          onDragStart={(e) => handleDragStart(e, 'audio', audio.id)}
+                          onDragEnter={() => handleDragEnterItem(audio.id, 'audio')}
+                          onDragOver={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                          onDrop={(e) => { e.stopPropagation(); e.preventDefault(); saveViewOrder(); setDraggedItem(null); }}
+                          onDragEnd={handleDragEnd}
+                          onDoubleClick={() => toggleAudio(audio)}
+                          onContextMenu={(e) => handleAudioContextMenu(e, audio.id)}
+                        >
+                          <div className="list-icon">
+                             <div className="list-icon-placeholder"><AudioLines size={28} /></div>
+                             <button
+                               className="list-preview-btn"
+                               onClick={(e) => { e.stopPropagation(); toggleAudio(audio); }}
+                               aria-label={playingId === audio.id ? 'Stop' : 'Play'}
+                             >
+                               {loadingId === audio.id ? (
+                                 <Loader2 size={16} className="animate-spin" />
+                               ) : playingId === audio.id ? (
+                                 <Square size={16} />
+                               ) : (
+                                 <Play size={16} />
+                               )}
+                             </button>
+                          </div>
+                          <span className="list-name">{audio.name}</span>
+                          <div className="list-meta">
+                            <span className="list-meta-label">Audio</span>
+                            <span className="list-meta-value">{(audio.ext || '').replace(/^\./, '').toUpperCase()}</span>
+                          </div>
+                          <div className="list-actions">
+                            <button
+                              className="list-action-btn"
+                              onClick={(e) => { e.stopPropagation(); toggleAudio(audio); }}
+                            >
+                              {playingId === audio.id ? 'Stop' : 'Play'}
+                            </button>
+                          </div>
                         </div>
                       );
                     } else {
@@ -1324,7 +1588,7 @@ export const Library: React.FC = () => {
                 )}
 
                 {!normalizedQuery && activeFacets.size === 0 &&
-                  currentListFolders.length === 0 && currentListProjects.length === 0 && (
+                  currentListFolders.length === 0 && currentListProjects.length === 0 && currentListAudio.length === 0 && (
                   <div className="empty-state-content">
                     <FileMusic size={32} className="empty-state-icon" />
                     <h3 className="empty-state-title">
@@ -1332,8 +1596,8 @@ export const Library: React.FC = () => {
                     </h3>
                     <p className="empty-state-subtitle">
                       {currentFolderId
-                        ? 'Drag a project in, or create a new one right here.'
-                        : 'Bring in a Logic, Ableton, FL Studio, Reaper, or Pro Tools project to start tracking every version.'}
+                        ? 'Drag a project or audio file in, or create a new one right here.'
+                        : 'Bring in a Logic, Ableton, FL Studio, Reaper, or Pro Tools project to start tracking every version — or drop in a bounce or reference to audition.'}
                     </p>
                     <button className="empty-state-cta" onClick={() => setShowNewProjectModal(true)}>
                       <Plus size={16} />
@@ -1406,16 +1670,19 @@ export const Library: React.FC = () => {
         if (!folder) return null;
         const childProjects = projects.filter(p => p.folderId === peek.folderId);
         const childSubfolders = folders.filter(f => f.parentId === peek.folderId);
+        const childAudio = audioItems.filter(a => a.folderId === peek.folderId);
         return (
           <FolderPeek
             folder={folder}
             projects={childProjects}
             subfolders={childSubfolders}
+            audioItems={childAudio}
             getIcon={getProjectIcon}
             anchorRect={peek.rect}
             onOpenProject={(id, name) => { setPeek(null); openProject(id, name); }}
             onEnterFolder={enterFolder}
             onEnterSubfolder={enterFolder}
+            onPlayAudio={(item) => { setPeek(null); toggleAudio(item); }}
             onClose={() => setPeek(null)}
           />
         );
@@ -1465,6 +1732,18 @@ export const Library: React.FC = () => {
         onChange={setRenameValue}
         onSubmit={handleRenameSubmit}
         onClose={() => { setShowRenameModal(false); setFolderToRename(null); }}
+        submitText="Rename"
+      />
+
+      {/* Rename Audio Modal */}
+      <InputModal
+        isOpen={showAudioRenameModal}
+        title="Rename Audio"
+        label="Name"
+        value={audioRenameValue}
+        onChange={setAudioRenameValue}
+        onSubmit={handleAudioRenameSubmit}
+        onClose={() => { setShowAudioRenameModal(false); setAudioToRename(null); }}
         submitText="Rename"
       />
 
