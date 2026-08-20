@@ -21,7 +21,7 @@ export type Project = {
     plugins?: Array<{ name: string; is_instrument?: boolean }>;
     trackCount?: number | null;
     hasPreview?: boolean;
-    latestCommitId?: string | null;
+    previewCommitId?: string | null;
     previewFile?: string | null;
 };
 

@@ -235,7 +235,7 @@ export const Library: React.FC = () => {
         plugins: Array<{ name: string; is_instrument?: boolean }>;
         trackCount: number | null;
         hasPreview: boolean;
-        latestCommitId: string | null;
+        previewCommitId: string | null;
         previewFile: string | null;
       }> = await window.ipcRenderer.invoke('get-project-facets').catch(() => ({}));
 
@@ -257,7 +257,7 @@ export const Library: React.FC = () => {
           plugins: facets?.plugins ?? [],
           trackCount: facets?.trackCount ?? null,
           hasPreview: facets?.hasPreview ?? false,
-          latestCommitId: facets?.latestCommitId ?? null,
+          previewCommitId: facets?.previewCommitId ?? null,
           previewFile: facets?.previewFile ?? null,
         };
       });

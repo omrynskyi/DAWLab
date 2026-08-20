@@ -27,7 +27,7 @@ describe('deriveProjectFacetData', () => {
       plugins: [],
       trackCount: null,
       hasPreview: false,
-      latestCommitId: null,
+      previewCommitId: null,
       previewFile: null,
     })
   })
@@ -80,20 +80,23 @@ describe('deriveProjectFacetData', () => {
     expect(deriveProjectFacetData(log).plugins).toEqual([{ name: 'Pro-Q', is_instrument: undefined }])
   })
 
-  it('reports the latest commit id from the current branch', () => {
+  it('prefers the latest commit that has a preview', () => {
     const log = makeLog({
       current_branch: 'main',
       branches: [
         {
           name: 'main',
           commits: [
-            { commit_id: 'c1', timestamp: '', message: '', author: '' },
-            { commit_id: 'c2', timestamp: '', message: '', author: '' },
+            { commit_id: 'c1', timestamp: '', message: '', author: '', preview_file: 'old.mp3' } as any,
+            { commit_id: 'c2', timestamp: '', message: '', author: '', preview_file: 'new.mp3' } as any,
           ],
         },
       ],
     })
-    expect(deriveProjectFacetData(log).latestCommitId).toBe('c2')
+    const result = deriveProjectFacetData(log)
+    expect(result.hasPreview).toBe(true)
+    expect(result.previewCommitId).toBe('c2')
+    expect(result.previewFile).toBe('new.mp3')
   })
 
   it('detects an available preview on the latest commit', () => {
@@ -109,28 +112,57 @@ describe('deriveProjectFacetData', () => {
     })
     const result = deriveProjectFacetData(log)
     expect(result.hasPreview).toBe(true)
+    expect(result.previewCommitId).toBe('c1')
     expect(result.previewFile).toBe('preview.mp3')
   })
 
-  it('reports no preview when the latest commit lacks one', () => {
+  it('falls back to the most recent commit that has a preview when the latest lacks one', () => {
     const log = makeLog({
       branches: [
-        { name: 'main', commits: [{ commit_id: 'c1', timestamp: '', message: '', author: '' }] },
+        {
+          name: 'main',
+          commits: [
+            { commit_id: 'c1', timestamp: '', message: '', author: '', preview_file: 'old.mp3' } as any,
+            { commit_id: 'c2', timestamp: '', message: '', author: '', preview_file: 'mid.mp3' } as any,
+            { commit_id: 'c3', timestamp: '', message: '', author: '' },
+          ],
+        },
+      ],
+    })
+    const result = deriveProjectFacetData(log)
+    expect(result.hasPreview).toBe(true)
+    expect(result.previewCommitId).toBe('c2')
+    expect(result.previewFile).toBe('mid.mp3')
+  })
+
+  it('reports no preview when no commit has one', () => {
+    const log = makeLog({
+      branches: [
+        {
+          name: 'main',
+          commits: [
+            { commit_id: 'c1', timestamp: '', message: '', author: '' },
+            { commit_id: 'c2', timestamp: '', message: '', author: '' },
+          ],
+        },
       ],
     })
     const result = deriveProjectFacetData(log)
     expect(result.hasPreview).toBe(false)
-    expect(result.latestCommitId).toBe('c1')
+    expect(result.previewCommitId).toBe(null)
+    expect(result.previewFile).toBe(null)
   })
 
-  it('resolves the current branch rather than the first branch', () => {
+  it('resolves the preview from the current branch rather than the first branch', () => {
     const log = makeLog({
       current_branch: 'feature',
       branches: [
-        { name: 'main', commits: [{ commit_id: 'm1', timestamp: '', message: '', author: '' }] },
-        { name: 'feature', commits: [{ commit_id: 'f1', timestamp: '', message: '', author: '' }] },
+        { name: 'main', commits: [{ commit_id: 'm1', timestamp: '', message: '', author: '', preview_file: 'main.mp3' } as any] },
+        { name: 'feature', commits: [{ commit_id: 'f1', timestamp: '', message: '', author: '', preview_file: 'feature.mp3' } as any] },
       ],
     })
-    expect(deriveProjectFacetData(log).latestCommitId).toBe('f1')
+    const result = deriveProjectFacetData(log)
+    expect(result.previewCommitId).toBe('f1')
+    expect(result.previewFile).toBe('feature.mp3')
   })
 })

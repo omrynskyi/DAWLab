@@ -113,14 +113,15 @@ export function useLibraryPreview() {
     }
   }, [getAudio, stop]);
 
-  // Play/stop a project's latest-commit audio preview.
+  // Play/stop a project's audio preview — the latest commit with one, else the
+  // most recent commit that has one (resolved in deriveProjectFacetData).
   const toggle = useCallback((project: Project) => {
-    if (!project.hasPreview || !project.latestCommitId || !project.previewFile) return;
+    if (!project.hasPreview || !project.previewCommitId || !project.previewFile) return;
     return toggleSource(project.id, () =>
       window.ipcRenderer.invoke(
         'get-preview-url',
         project.name,
-        project.latestCommitId,
+        project.previewCommitId,
         project.previewFile,
       ),
     );

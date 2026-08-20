@@ -15,11 +15,16 @@ export interface ProjectFacetData {
     plugins: Array<{ name: string; is_instrument?: boolean }>;
     /** Total track count from the latest metadata extraction. */
     trackCount: number | null;
-    /** Whether the most recent commit has an audio preview attached. */
+    /** Whether any commit on the current branch has an audio preview attached. */
     hasPreview: boolean;
-    /** The most recent commit id on the current branch, if any. */
-    latestCommitId: string | null;
-    /** Filename of the audio preview on the latest commit, needed to build its dawpreview:// URL. */
+    /**
+     * Commit id whose preview we surface: the latest commit that has one, else
+     * the most recent commit that does ("latest or most available"). The preview
+     * file lives in this commit's storage, so this is the id used to resolve its
+     * dawpreview:// URL.
+     */
+    previewCommitId: string | null;
+    /** Filename of the audio preview on `previewCommitId`, needed to build its dawpreview:// URL. */
     previewFile: string | null;
 }
 
@@ -36,7 +41,7 @@ export function deriveProjectFacetData(log: ProjectLog | null | undefined): Proj
         plugins: [],
         trackCount: null,
         hasPreview: false,
-        latestCommitId: null,
+        previewCommitId: null,
         previewFile: null,
     };
     if (!log) return empty;
@@ -58,19 +63,28 @@ export function deriveProjectFacetData(log: ProjectLog | null | undefined): Proj
         plugins.push({ name: p.name, is_instrument: p.is_instrument });
     }
 
-    // The latest commit is the last one pushed onto the current branch.
+    // Commits are ordered oldest→newest on the current branch. Walk backwards for
+    // the most recent commit that actually carries a preview: prefer the latest
+    // commit, but fall back to the most recent one that has a preview so a project
+    // whose newest commit lacks a preview still shows one ("latest or most available").
     const branch =
         log.branches?.find((b) => b.name === log.current_branch) ?? log.branches?.[0];
     const commits = (branch?.commits ?? []) as CommitWithPreview[];
-    const latest = commits.length > 0 ? commits[commits.length - 1] : null;
+    let previewCommit: CommitWithPreview | null = null;
+    for (let i = commits.length - 1; i >= 0; i--) {
+        if (commits[i]?.preview_file) {
+            previewCommit = commits[i];
+            break;
+        }
+    }
 
     return {
         bpm,
         plugins,
         trackCount,
-        hasPreview: Boolean(latest?.preview_file),
-        latestCommitId: latest?.commit_id ?? null,
-        previewFile: latest?.preview_file ?? null,
+        hasPreview: Boolean(previewCommit),
+        previewCommitId: previewCommit?.commit_id ?? null,
+        previewFile: previewCommit?.preview_file ?? null,
     };
 }
 
