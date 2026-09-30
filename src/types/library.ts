@@ -23,6 +23,13 @@ export type Project = {
     hasPreview?: boolean;
     previewCommitId?: string | null;
     previewFile?: string | null;
+    previewCommitMessage?: string | null;
+    previewCommitTimestamp?: string | null;
+    // Tags applied to any version of the project (from the project log).
+    versionTags?: string[];
+    // Project state (from the registry) — see @/lib/projectState.
+    stage?: string | null;
+    openTasks?: number;
 };
 
 export type Folder = {

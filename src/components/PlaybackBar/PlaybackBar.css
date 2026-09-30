@@ -1,0 +1,107 @@
+.playback-bar {
+  position: relative;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.playback-bar__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-blue, #007AFF);
+}
+
+/* Card bar: a thin read-only line. */
+.playback-bar--inline {
+  width: 110px;
+  height: 4px;
+  pointer-events: none;
+}
+
+/* Quick Look bar: draggable. On hover it grows, shows a ghost fill and a time
+   tooltip at the cursor, and reveals the thumb — so it reads as clickable. */
+.playback-bar-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.playback-bar--panel {
+  height: 8px;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+  transition: height 0.12s, background 0.12s;
+}
+
+.playback-bar--panel::before {
+  /* Larger invisible hit area so the thin track is easy to grab. */
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+
+.playback-bar--panel:hover,
+.playback-bar--panel:focus-visible,
+.playback-bar--dragging {
+  height: 12px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.playback-bar--panel:focus-visible {
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.5);
+}
+
+.playback-bar__hover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+.playback-bar__fill {
+  position: relative;
+}
+
+.playback-bar__tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
+  transform: translateX(-50%);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.playback-bar__thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.12s;
+  pointer-events: none;
+}
+
+.playback-bar--panel:hover .playback-bar__thumb,
+.playback-bar--panel:focus-visible .playback-bar__thumb,
+.playback-bar--dragging .playback-bar__thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.playback-bar__times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.55);
+}

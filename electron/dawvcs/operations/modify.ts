@@ -1,4 +1,4 @@
-import { saveProjectLog, loadProjectLog } from '../core/log'
+import { saveProjectLog, loadProjectLog, loadLocalProjectLog } from '../core/log'
 import { loadRegistry, saveRegistry, getProjectPath } from '../core/registry'
 import { ProjectInfo } from '../types'
 import path from 'path'
@@ -35,7 +35,8 @@ export async function updateProjectInRegistry(
 
   const validKeys: (keyof ProjectInfo)[] = [
     'project_id', 'name', 'path', 'daw', 'genre',
-    'description', 'key', 'bpm', 'privacy_flag', 'tags'
+    'description', 'key', 'bpm', 'privacy_flag', 'tags',
+    'stage', 'tasks', 'notepad'
   ]
   const filteredUpdates: Partial<Record<keyof ProjectInfo, any>> = {}
   for (const key of Object.keys(updates)) {
@@ -109,8 +110,35 @@ export async function getProjectDetails(projectId: string) {
       access_source: 'owned',
       project_path: projectPath || 'NA',
       tags: log?.tags ?? projectData.tags ?? [],
+      stage: projectData.stage ?? null,
+      tasks: projectData.tasks ?? [],
+      notepad: projectData.notepad ?? '',
     }
   }
 
   return null
+}
+
+/**
+ * Replace the tags on a single commit. Commit ids are unique across branches,
+ * but a branch created from a commit shares its entries, so every matching
+ * entry is updated to keep them in step.
+ */
+export function setCommitTags(projectName: string, commitId: string, tags: string[]): string[] {
+  const log = loadLocalProjectLog(projectName)
+  if (!log) throw new Error(`Project log for "${projectName}" not found`)
+
+  const unique = Array.from(new Set(tags.map(t => t.trim()).filter(Boolean)))
+  let found = false
+  for (const branch of log.branches ?? []) {
+    for (const commit of branch.commits ?? []) {
+      if (String(commit.commit_id) !== String(commitId)) continue
+      commit.tags = unique
+      found = true
+    }
+  }
+  if (!found) throw new Error(`Commit ${commitId} not found in "${projectName}"`)
+
+  saveProjectLog(projectName, log)
+  return unique
 }

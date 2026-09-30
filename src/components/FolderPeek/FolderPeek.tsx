@@ -24,11 +24,9 @@ interface FolderPeekProps {
   onClose: () => void;
 }
 
-const MAX_PEEK_ITEMS = 9;
-
 /**
  * iOS-style folder peek: clicking a folder expands it in place into a small
- * panel showing up to 9 of its contents, letting you jump straight to a project
+ * panel showing its contents, letting you jump straight to a project
  * or enter the folder — without leaving the library grid.
  */
 export const FolderPeek: React.FC<FolderPeekProps> = ({
@@ -62,12 +60,11 @@ export const FolderPeek: React.FC<FolderPeekProps> = ({
     setPos({ left, top });
   }, [anchorRect]);
 
-  // Subfolders first, then projects, then audio, capped at 9 (iOS shows 9 on the second page).
+  // Subfolders first, then projects, then audio. The grid scrolls when it doesn't fit.
   const folderItems = subfolders.map(f => ({ kind: 'folder' as const, item: f }));
   const projectItems = projects.map(p => ({ kind: 'project' as const, item: p }));
   const audioItemsList = audioItems.map(a => ({ kind: 'audio' as const, item: a }));
-  const items = [...folderItems, ...projectItems, ...audioItemsList].slice(0, MAX_PEEK_ITEMS);
-  const overflow = subfolders.length + projects.length + audioItems.length - items.length;
+  const items = [...folderItems, ...projectItems, ...audioItemsList];
   const isEmpty = items.length === 0;
 
   return (
@@ -135,12 +132,6 @@ export const FolderPeek: React.FC<FolderPeekProps> = ({
                 <span className="folder-peek-item-name">{item.name}</span>
               </button>
             )
-          )}
-          {overflow > 0 && (
-            <button className="folder-peek-item folder-peek-more" onClick={() => onEnterFolder(folder.id)}>
-              <span className="folder-peek-item-icon">+{overflow}</span>
-              <span className="folder-peek-item-name">more</span>
-            </button>
           )}
         </div>
       )}

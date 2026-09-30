@@ -1,10 +1,19 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { useUsername } from '../../hooks/useUsername';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, HardDrive, RefreshCw, ArrowLeft, FolderGit2, FolderPlus, FolderSearch, Loader2, UserPlus, RotateCcw, ChevronDown, Trash2 } from 'lucide-react';
 import { validateUsername, sanitizeUsername } from '../../utils/usernameUtils';
+import {
+  DEFAULT_DEVICE_ID,
+  canSelectOutputDevice,
+  getAudioSettings,
+  listOutputDevices,
+  onOutputDevicesChanged,
+  updateAudioSettings,
+  type OutputDevice,
+} from '../../lib/audioOutput';
 import './Settings.css';
 
 // A folder DAWLab re-scans for new projects (mirrors the main-process shape).
@@ -64,6 +73,42 @@ export const Settings: React.FC = () => {
   // Watched folders — where DAWLab looks for newly-created projects
   const [watchedDirs, setWatchedDirs] = useState<WatchedDir[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+
+  // Audio output — device + preview volume (persisted by lib/audioOutput)
+  const [audioSettings, setAudioSettings] = useState(getAudioSettings);
+  const [outputDevices, setOutputDevices] = useState<OutputDevice[]>([]);
+  const canPickOutput = canSelectOutputDevice();
+
+  const refreshOutputDevices = useCallback(async () => {
+    try {
+      setOutputDevices(await listOutputDevices());
+    } catch (err) {
+      console.error('Error listing audio output devices:', err);
+      setOutputDevices([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!canPickOutput) return;
+    refreshOutputDevices();
+    return onOutputDevicesChanged(refreshOutputDevices);
+  }, [canPickOutput, refreshOutputDevices]);
+
+  const selectedDeviceMissing =
+    audioSettings.outputDeviceId !== DEFAULT_DEVICE_ID &&
+    !outputDevices.some((d) => d.deviceId === audioSettings.outputDeviceId);
+
+  const changeOutputDevice = (deviceId: string) => {
+    const device = outputDevices.find((d) => d.deviceId === deviceId);
+    setAudioSettings(updateAudioSettings({
+      outputDeviceId: deviceId,
+      outputDeviceLabel: device?.label ?? '',
+    }));
+  };
+
+  const changeVolume = (percent: number) => {
+    setAudioSettings(updateAudioSettings({ volume: percent / 100 }));
+  };
 
   const loadUsers = async (activeUser: string | null) => {
     try {
@@ -511,6 +556,64 @@ export const Settings: React.FC = () => {
                 ? <>History lives inside each project folder, right next to your DAW files — if you delete the project, you delete its whole history too.</>
                 : <>History is kept separately in your home library, so deleting a project folder elsewhere won't affect its history.</>}
               {' '}You can override this per-project when creating a new project.
+            </p>
+          </div>
+        </div>
+
+        {/* Audio Section */}
+        <div className="form-field">
+          <label className="form-field-label" htmlFor="audio-output-select">Audio</label>
+          <div className="form-field-content">
+            <div className="audio-setting-row">
+              <span className="audio-setting-label">Output device</span>
+              <select
+                id="audio-output-select"
+                className="audio-select"
+                value={audioSettings.outputDeviceId}
+                onChange={(e) => changeOutputDevice(e.target.value)}
+                disabled={!canPickOutput}
+              >
+                <option value={DEFAULT_DEVICE_ID}>System default</option>
+                {selectedDeviceMissing && (
+                  <option value={audioSettings.outputDeviceId}>
+                    {audioSettings.outputDeviceLabel || 'Selected device'} (unavailable)
+                  </option>
+                )}
+                {outputDevices.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                ))}
+              </select>
+              {canPickOutput && (
+                <button
+                  className="refresh-button"
+                  onClick={refreshOutputDevices}
+                  title="Refresh devices"
+                  aria-label="Refresh devices"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              )}
+            </div>
+            <div className="audio-setting-row">
+              <span className="audio-setting-label">Preview volume</span>
+              <input
+                type="range"
+                className="audio-volume"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round(audioSettings.volume * 100)}
+                onChange={(e) => changeVolume(Number(e.target.value))}
+                aria-label="Preview volume"
+              />
+              <span className="audio-volume-value">{Math.round(audioSettings.volume * 100)}%</span>
+            </div>
+            <p className="field-hint">
+              {!canPickOutput
+                ? 'Choosing an output device isn’t supported on this platform — previews play through the system output.'
+                : selectedDeviceMissing
+                  ? 'The selected device isn’t connected, so previews play through the system default. They’ll switch back automatically when it returns.'
+                  : 'Applies to previews in the Library and History. If the selected device disappears, playback falls back to the system default.'}
             </p>
           </div>
         </div>

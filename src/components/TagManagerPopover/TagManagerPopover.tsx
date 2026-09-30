@@ -6,6 +6,8 @@ import { X } from 'lucide-react';
 import './TagManagerPopover.css';
 
 interface TagManagerPopoverProps {
+  /** Header label — defaults to "Tags". */
+  title?: string;
   x: number;
   y: number;
   tags: string[];
@@ -17,6 +19,7 @@ interface TagManagerPopoverProps {
 }
 
 export const TagManagerPopover: React.FC<TagManagerPopoverProps> = ({
+  title = 'Tags',
   x,
   y,
   tags,
@@ -65,7 +68,7 @@ export const TagManagerPopover: React.FC<TagManagerPopoverProps> = ({
       onContextMenu={e => e.preventDefault()}
     >
       <div className="tmp-header">
-        <span className="tmp-title">Tags</span>
+        <span className="tmp-title">{title}</span>
         <button className="tmp-close" onClick={onClose} aria-label="Close">
           <X size={14} />
         </button>

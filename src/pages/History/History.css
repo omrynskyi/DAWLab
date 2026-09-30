@@ -294,6 +294,16 @@
   color: white;
 }
 
+/* Opens the full-screen feedback view; sits at the player's right edge. */
+.fullscreen-btn {
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+.fullscreen-btn:hover {
+  color: white;
+}
+
 .player-info {
   display: flex;
   align-items: center;

@@ -6,7 +6,7 @@ interface TagChipProps {
   tag: string;
   color?: string; // Any hex color; drives the chip's accent (border / active fill)
   onRemove?: () => void;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   active?: boolean;
   removable?: boolean;

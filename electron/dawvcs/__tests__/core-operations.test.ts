@@ -6,7 +6,7 @@ import { rollbackProjectLocal } from "../operations/rollback";
 import { setUsername, clearUsername } from "../core/constants";
 import { deleteProjectLocal } from "../operations/delete";
 import { getCleanableFiles, cleanCasFiles } from "../operations/clean";
-import { updateProjectLog, updateProjectInRegistry } from "../operations/modify";
+import { updateProjectLog, updateProjectInRegistry, setCommitTags, getProjectDetails } from "../operations/modify";
 import { loadLocalProjectLog } from "../core/log";
 import { getCommitFileMap, commitExists } from "../core/commits";
 import { ProjectFileAmbiguityError } from "../core/daw-detection";
@@ -1681,6 +1681,37 @@ describe("Core VCS Operations", () => {
       const registryPath = path.join(os.homedir(), ".dawlab", "users", "test-user", "registry.json");
       JSON.parse(fs.readFileSync(registryPath, "utf-8"));
       // expect(registry[projectName].description).toBe(newDescription);
+    });
+
+    it("should set, dedupe and clear version tags on a commit", async () => {
+      await initProject(projectName, projectPath, { author: "test-author" });
+      await commitProjectLocal(projectName, "First mix", "main", "test-author");
+      const commitId = loadLocalProjectLog(projectName).branches[0].commits[0].commit_id;
+
+      expect(setCommitTags(projectName, commitId, ["Rough Mix", " Rough Mix ", "Vocals"]))
+        .toEqual(["Rough Mix", "Vocals"]);
+      expect(loadLocalProjectLog(projectName).branches[0].commits[0].tags)
+        .toEqual(["Rough Mix", "Vocals"]);
+
+      setCommitTags(projectName, commitId, []);
+      expect(loadLocalProjectLog(projectName).branches[0].commits[0].tags).toEqual([]);
+    });
+
+    it("should reject version tags for an unknown commit", async () => {
+      await initProject(projectName, projectPath, { author: "test-author" });
+      expect(() => setCommitTags(projectName, "missing", ["Master"])).toThrow(/not found/);
+    });
+
+    it("should persist project state (stage, tasks, notepad) in the registry", async () => {
+      await initProject(projectName, projectPath, { author: "test-author" });
+      const tasks = [{ id: "t1", text: "Fix vocal timing", done: false }];
+      await updateProjectInRegistry(projectName, { stage: "mixing", tasks, notepad: "Brighter chorus" });
+
+      const projectId = loadLocalProjectLog(projectName).id;
+      const details = await getProjectDetails(projectId);
+      expect(details?.stage).toBe("mixing");
+      expect(details?.tasks).toEqual(tasks);
+      expect(details?.notepad).toBe("Brighter chorus");
     });
   });
 });

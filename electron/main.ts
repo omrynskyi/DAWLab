@@ -5,7 +5,6 @@ import {
   dialog,
   shell,
   protocol,
-  net,
 } from "electron";
 import {
   initProject,
@@ -18,6 +17,7 @@ import {
   deleteProject,
   updateProjectLog,
   updateProjectInRegistry,
+  setCommitTags,
   openProject,
   checkProjectModified,
   getProjectLastSaveTime,
@@ -53,6 +53,8 @@ import { getCasPath, calculateCasSize } from "./dawvcs/core/cas";
 import { getProjectPath } from "./dawvcs/core/registry";
 import { saveProjectLog } from "./dawvcs/core/log";
 import { getCommitPath, getCommitFileMap } from "./dawvcs/core/commits";
+import { writeJsonSync } from "./dawvcs/core/fs-utils";
+import { parseCommentsFile, serializeComments } from "./feedback/comments-file";
 import { getProjectStorageDirs } from "./dawvcs/core/storage-location";
 import { detectDAW, getProjectFileCandidates } from "./dawvcs/core/daw-detection";
 import { getCleanableFiles, cleanCasFiles } from "./dawvcs/operations/clean";
@@ -62,6 +64,9 @@ import { startDraftWatch, stopDraftWatch, stopAllDraftWatches } from "./watchers
 import { fileURLToPath } from "node:url";
 
 import path from "node:path";
+import { Readable } from "node:stream";
+import { getMediaUrl, stopMediaServer } from "./media/server";
+import { audioMimeType, resolveRange } from "./media/range";
 import fs from "node:fs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -260,6 +265,7 @@ app.on("window-all-closed", () => {
 // Tear down any active file watchers before the app exits.
 app.on("before-quit", () => {
   stopAllDraftWatches();
+  stopMediaServer();
 });
 
 app.on("activate", () => {
@@ -279,52 +285,53 @@ app.whenReady().then(() => {
     console.warn("[main.ts] Failed to initialize username:", err);
   }
 
-  // Register dawpreview protocol for audio previews
+  // Register dawpreview protocol. Used for fetching audio bytes (e.g. peak
+  // computation). Playback goes through the loopback media server instead —
+  // <audio> can't seek or resume over a custom protocol (see media/server.ts).
   protocol.handle("dawpreview", async (request) => {
     const url = new URL(request.url);
     const filePath = decodeURIComponent(url.pathname);
-
-    // Correctly format the file path
     const normalizedPath =
       process.platform === "win32" && filePath.startsWith("/")
         ? filePath.substring(1)
         : filePath;
 
-    const fileUrl = "file://" + normalizedPath;
-
+    let stats: fs.Stats;
     try {
-      // Get file size for Content-Length
-      const stats = fs.statSync(normalizedPath);
-      const fileSize = stats.size;
-      const response = await net.fetch(fileUrl);
-      const extension = path.extname(normalizedPath).toLowerCase();
-
-      const mimeTypes: Record<string, string> = {
-        ".mp3": "audio/mpeg",
-        ".wav": "audio/wav",
-        ".aif": "audio/x-aiff",
-        ".aiff": "audio/x-aiff",
-        ".flac": "audio/flac",
-        ".m4a": "audio/mp4",
-        ".ogg": "audio/ogg",
-      };
-
-      const mimeType = mimeTypes[extension] || "audio/mpeg";
-
-      const headers = new Headers(response.headers);
-      headers.set("Content-Type", mimeType);
-      headers.set("Content-Length", fileSize.toString());
-      headers.set("Accept-Ranges", "bytes");
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
-    } catch (error) {
-      console.error("[Protocol] Error:", error);
-      return net.fetch(fileUrl);
+      stats = await fs.promises.stat(normalizedPath);
+      if (!stats.isFile()) throw new Error("not a file");
+    } catch {
+      return new Response("Audio file not found", { status: 404 });
     }
+
+    const size = stats.size;
+    const range = resolveRange(request.headers.get("range"), size);
+    const baseHeaders = {
+      "Content-Type": audioMimeType(path.extname(normalizedPath)),
+      "Accept-Ranges": "bytes",
+    };
+    if (range.kind === "unsatisfiable") {
+      return new Response(null, {
+        status: 416,
+        headers: { ...baseHeaders, "Content-Range": `bytes */${size}` },
+      });
+    }
+
+    const partial = range.kind === "partial";
+    const headers: Record<string, string> = {
+      ...baseHeaders,
+      "Content-Length": String(size === 0 ? 0 : range.end - range.start + 1),
+    };
+    if (partial) headers["Content-Range"] = `bytes ${range.start}-${range.end}/${size}`;
+
+    if (request.method === "HEAD" || size === 0) {
+      return new Response(null, { status: partial ? 206 : 200, headers });
+    }
+
+    const stream = Readable.toWeb(
+      fs.createReadStream(normalizedPath, { start: range.start, end: range.end }),
+    ) as ReadableStream;
+    return new Response(stream, { status: partial ? 206 : 200, headers });
   });
 
   // Pre-scan plugins in the background so cache is warm
@@ -602,6 +609,28 @@ ipcMain.handle(
   }
 );
 
+/**
+ * Previews attached via addPreviewToCommit are copied into the commit dir, but
+ * previews captured during a normal commit live only in CAS (fileName is the
+ * preview's CAS hash). Prefer the commit-dir copy, fall back to CAS. Returns
+ * null when the file is gone.
+ */
+function resolvePreviewPath(projectName: string, commitId: string, fileName: string): string | null {
+  const { commitsDir: previewCommitsDir, casDir } = getProjectStorageDirs(projectName);
+  const commitPath = getCommitPath(projectName, commitId, previewCommitsDir);
+  const commitFilePath = path.join(commitPath, fileName);
+  const fullPath = fs.existsSync(commitFilePath)
+    ? commitFilePath
+    : getCasPath(fileName, casDir);
+  return fs.existsSync(fullPath) ? fullPath : null;
+}
+
+/** dawpreview:// URL for a local file, with each path segment escaped. */
+function toDawpreviewUrl(filePath: string): string {
+  const encoded = filePath.split("/").map(encodeURIComponent).join("/");
+  return `dawpreview://active${encoded.startsWith("/") ? "" : "/"}${encoded}`;
+}
+
 ipcMain.handle(
   "get-preview-url",
   async (
@@ -610,18 +639,60 @@ ipcMain.handle(
     commitId: string,
     fileName: string,
   ) => {
-    const { commitsDir: previewCommitsDir, casDir } = getProjectStorageDirs(projectName);
-    const commitPath = getCommitPath(projectName, commitId, previewCommitsDir);
-    const commitFilePath = path.join(commitPath, fileName);
+    // A missing file resolves to null so the renderer can surface a clear error
+    // instead of pointing the <audio> element at a URL that will 404.
+    const fullPath = resolvePreviewPath(projectName, commitId, fileName);
+    return fullPath ? getMediaUrl(fullPath) : null;
+  },
+);
 
-    // Previews attached via addPreviewToCommit are copied into the commit dir,
-    // but previews captured during a normal commit live only in CAS (fileName is
-    // the preview's CAS hash). Prefer the commit-dir copy, fall back to CAS.
-    const fullPath = fs.existsSync(commitFilePath)
-      ? commitFilePath
-      : getCasPath(fileName, casDir);
+// Both URLs for one preview: `playUrl` for <audio> (seekable loopback HTTP) and
+// `fetchUrl` for reading the bytes to draw a waveform (fetchable custom protocol).
+ipcMain.handle(
+  "get-preview-sources",
+  async (_ev, projectName: string, commitId: string, fileName: string) => {
+    const fullPath = resolvePreviewPath(projectName, commitId, fileName);
+    if (!fullPath) return null;
+    return { playUrl: await getMediaUrl(fullPath), fetchUrl: toDawpreviewUrl(fullPath) };
+  },
+);
 
-    return `dawpreview://active${fullPath.startsWith("/") ? "" : "/"}${fullPath}`;
+// Feedback comments are stored per version, next to the version's filemap.
+const COMMENTS_FILE = "comments.json";
+
+function commentsPath(projectName: string, commitId: string): string {
+  // commitId names a directory; refuse anything that could escape it.
+  if (!commitId || path.basename(commitId) !== commitId || commitId === "..") {
+    throw new Error(`Invalid commit id: ${commitId}`);
+  }
+  const { commitsDir } = getProjectStorageDirs(projectName);
+  return path.join(getCommitPath(projectName, commitId, commitsDir), COMMENTS_FILE);
+}
+
+// Throws when the file can't be read safely (corrupt, or from a newer DAWLab);
+// the renderer then shows no comments and won't save over it.
+ipcMain.handle("get-commit-comments", async (_ev, projectName: string, commitId: string) => {
+  const file = commentsPath(projectName, commitId);
+  if (!fs.existsSync(file)) return [];
+  try {
+    return parseCommentsFile(await fs.promises.readFile(file, "utf8"));
+  } catch (err) {
+    console.error(`[main.ts] Unreadable comments for commit ${commitId}:`, err);
+    throw err;
+  }
+});
+
+ipcMain.handle(
+  "save-commit-comments",
+  async (_ev, projectName: string, commitId: string, comments: unknown) => {
+    if (!Array.isArray(comments)) throw new Error("comments must be an array");
+    const file = commentsPath(projectName, commitId);
+    // Only write into a version that exists; never create stray commit dirs.
+    if (!fs.existsSync(path.dirname(file))) throw new Error(`Unknown commit ${commitId}`);
+    // Never overwrite a file we can't read (e.g. written by a newer DAWLab).
+    if (fs.existsSync(file)) parseCommentsFile(fs.readFileSync(file, "utf8"));
+    writeJsonSync(file, serializeComments(comments));
+    return { success: true };
   },
 );
 
@@ -1031,6 +1102,25 @@ ipcMain.handle('delete-tag-from-project', async (_ev, projectId: string, tag: st
     console.error("[main.ts] Error deleting tag:", err);
     throw err;
   }
+});
+
+// Replace the tags on a single version (commit).
+ipcMain.handle('set-commit-tags', async (_ev, projectName: string, commitId: string, tags: string[]) => {
+  return setCommitTags(projectName, commitId, tags);
+});
+
+// Project state: stage, tasks and notepad. Partial updates — only the given
+// fields are written.
+ipcMain.handle('update-project-state', async (_ev, projectId: string, updates: Record<string, any>) => {
+  const localProject = getAllProjects().find((p: any) => p.project_id === projectId);
+  if (!localProject) throw new Error('Project not found');
+
+  const allowed: Record<string, any> = {};
+  for (const key of ['stage', 'tasks', 'notepad']) {
+    if (key in updates) allowed[key] = updates[key];
+  }
+  await updateProjectInRegistry(localProject.name, allowed);
+  return { success: true };
 });
 
 // Tag Color Preferences Handlers
@@ -1530,13 +1620,12 @@ ipcMain.handle(
   },
 );
 
-// Resolve an audio item to a dawpreview:// URL the renderer can stream/play.
+// Resolve an audio item to a URL the renderer can stream/play/seek.
 ipcMain.handle("get-audio-url", async (_ev, id: string) => {
   const manager = getUserConfigManager(getUsername());
   const item = manager.getAudioItems().find((a) => a.id === id);
-  if (!item) return null;
-  const fullPath = item.filePath;
-  return `dawpreview://active${fullPath.startsWith("/") ? "" : "/"}${fullPath}`;
+  if (!item || !fs.existsSync(item.filePath)) return null;
+  return getMediaUrl(item.filePath);
 });
 
 // Delete an audio item: remove the config entry and its copied file on disk.

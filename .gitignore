@@ -30,3 +30,5 @@ release/
 
 
 dist-electron/main.js
+.orchestrator.json
+.designchord-worktrees/

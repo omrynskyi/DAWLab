@@ -1,4 +1,7 @@
 import type { Project } from '@/types/library';
+import { getStage, PROJECT_STAGES } from '@/lib/projectState';
+
+const PROJECT_STAGE_ORDER = PROJECT_STAGES.map(s => s.id);
 
 /**
  * Auto-facets turn per-project metadata into a unified, filterable tag surface.
@@ -6,7 +9,7 @@ import type { Project } from '@/types/library';
  * and a `value` (the thing being filtered on). Manual user tags are modelled as
  * just another facet type so filtering can treat everything uniformly.
  */
-export type FacetType = 'daw' | 'bpm' | 'plugin' | 'size' | 'manual';
+export type FacetType = 'stage' | 'daw' | 'bpm' | 'plugin' | 'size' | 'manual' | 'version';
 
 export interface Facet {
   type: FacetType;
@@ -20,23 +23,27 @@ export interface Facet {
 
 /** Human-readable heading for each facet group in the filter panel. */
 export const FACET_GROUP_LABELS: Record<FacetType, string> = {
+  stage: 'Stage',
   daw: 'DAW',
   bpm: 'Tempo',
   plugin: 'Plugins',
   size: 'Session size',
   manual: 'Tags',
+  version: 'Version tags',
 };
 
 /** Order the facet groups appear in the filter panel. */
-export const FACET_GROUP_ORDER: FacetType[] = ['daw', 'bpm', 'plugin', 'size', 'manual'];
+export const FACET_GROUP_ORDER: FacetType[] = ['stage', 'daw', 'bpm', 'plugin', 'size', 'manual', 'version'];
 
 /** Default chip colour per facet type. Manual tags fall back to their saved colour. */
 const FACET_COLORS: Record<FacetType, string> = {
+  stage: '#007bff',
   daw: '#a855f7',
   bpm: '#22c55e',
   plugin: '#f59e0b',
   size: '#06b6d4',
   manual: '#007bff',
+  version: '#007bff',
 };
 
 /**
@@ -48,9 +55,15 @@ export function facetKey(facet: Pick<Facet, 'type' | 'value'>): string {
   return `${facet.type}::${facet.value.toLowerCase()}`;
 }
 
-/** Resolve the chip colour for a facet (manual tags may have a user-picked colour). */
+/**
+ * Resolve the chip colour for a facet. Manual and version tags share the
+ * user-picked tag colours; stages carry their own lifecycle colour.
+ */
 export function facetColor(facet: Facet, tagColors: Record<string, string>): string {
-  if (facet.type === 'manual') return tagColors[facet.value] || FACET_COLORS.manual;
+  if (facet.type === 'manual' || facet.type === 'version') {
+    return tagColors[facet.value] || FACET_COLORS[facet.type];
+  }
+  if (facet.type === 'stage') return getStage(facet.value)?.color || FACET_COLORS.stage;
   return FACET_COLORS[facet.type];
 }
 
@@ -75,6 +88,11 @@ export function trackCountBucketLabel(count: number): string {
  */
 export function deriveFacets(project: Project): Facet[] {
   const facets: Facet[] = [];
+
+  const stage = getStage(project.stage);
+  if (stage) {
+    facets.push({ type: 'stage', value: stage.id, label: stage.label });
+  }
 
   if (project.daw && project.daw !== 'Unknown') {
     facets.push({ type: 'daw', value: project.daw, label: project.daw });
@@ -109,6 +127,11 @@ export function deriveFacets(project: Project): Facet[] {
     facets.push({ type: 'manual', value: tag, label: tag });
   }
 
+  for (const tag of project.versionTags ?? []) {
+    if (!tag) continue;
+    facets.push({ type: 'version', value: tag, label: tag });
+  }
+
   return facets;
 }
 
@@ -136,8 +159,11 @@ export function collectFacets(projects: Project[]): Map<FacetType, Facet[]> {
     const group = byType.get(type);
     if (!group || group.size === 0) continue;
     const facets = Array.from(group.values());
-    // Plugins sort instruments first, then alphabetically; others alphabetically.
+    // Stages keep lifecycle order; plugins sort instruments first, then
+    // alphabetically; others alphabetically.
+    const stageIndex = (f: Facet) => PROJECT_STAGE_ORDER.indexOf(f.value);
     facets.sort((a, b) => {
+      if (type === 'stage') return stageIndex(a) - stageIndex(b);
       if (type === 'plugin' && !!a.isInstrument !== !!b.isInstrument) {
         return a.isInstrument ? -1 : 1;
       }
