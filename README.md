@@ -4,6 +4,8 @@
 
 Think of it as "Git for your Ableton / Logic / FL Studio projects," but built for how producers actually work.
 
+![DAWLab project view: saved versions across the top, the project's files, instruments and effects, timestamped comments on the current mix, and the preview player](docs/images/dawlab-project.png)
+
 ---
 
 ## Features
@@ -13,6 +15,7 @@ Think of it as "Git for your Ableton / Logic / FL Studio projects," but built fo
 - 🌱 **Branching & rollback** — explore alternate arrangements on a branch, then roll back to any previous version safely.
 - 🔍 **Content-addressable storage** — files are deduplicated with SHA-256 CAS, so repeated saves don't bloat your disk.
 - 🎧 **Previews & metadata** — extracts tempo, tracks, and plugin info, and can attach audio previews to versions.
+- 💬 **Feedback on your mixes** — leave timestamped comments on any version's preview, then open a full-screen waveform view to review them, loop sections, and A/B versions side by side.
 - 💾 **Local-first** — everything lives on your machine in a `.dawlabproject` store. Your work never leaves your computer.
 
 ## Supported platforms
