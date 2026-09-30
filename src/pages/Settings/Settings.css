@@ -1136,3 +1136,46 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* Audio Section */
+.audio-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0.75rem;
+}
+
+.audio-setting-label {
+  flex: 0 0 110px;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.audio-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 320px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid #333;
+  background: #1c1c1c;
+  color: #ccc;
+  font-size: 13px;
+}
+
+.audio-select:disabled {
+  opacity: 0.6;
+}
+
+.audio-volume {
+  flex: 1;
+  max-width: 240px;
+  accent-color: var(--accent-blue, #3b82f6);
+}
+
+.audio-volume-value {
+  width: 40px;
+  font-size: 13px;
+  color: #999;
+  font-variant-numeric: tabular-nums;
+}

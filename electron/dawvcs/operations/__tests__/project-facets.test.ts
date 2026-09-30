@@ -29,6 +29,8 @@ describe('deriveProjectFacetData', () => {
       hasPreview: false,
       previewCommitId: null,
       previewFile: null,
+      previewCommitMessage: null,
+      previewCommitTimestamp: null,
     })
   })
 

@@ -1406,3 +1406,138 @@
   color: #666;
   white-space: nowrap;
 }
+
+/* Playback failure / fallback toast */
+.playback-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(560px, calc(100% - 48px));
+  padding: 10px 12px 10px 16px;
+  border-radius: 10px;
+  background: #1c1c20;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.playback-toast--error {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.playback-toast__text {
+  flex: 1;
+}
+
+.playback-toast__action {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-blue, #3b82f6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.playback-toast__action:hover {
+  filter: brightness(1.12);
+}
+
+.playback-toast__close {
+  display: flex;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+
+.playback-toast__close:hover {
+  color: #fff;
+}
+
+/* ===========================
+   Selection & inline progress bar
+   =========================== */
+
+.library-item,
+.list-row {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.items-container.grid .library-item.selected,
+.items-container.grid .library-item.selected:hover {
+  background-color: rgba(0, 122, 255, 0.16);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 122, 255, 0.55);
+}
+
+.list-row.selected,
+.list-row.selected:hover {
+  background-color: rgba(0, 122, 255, 0.16);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 122, 255, 0.55);
+}
+
+/* Grid: sits between the artwork and the name. The negative margins cancel the
+   extra flex gap and its own height, so the bar appearing never shifts the layout. */
+.item-playbar {
+  height: 4px;
+  margin: -2px 0 -6px;
+  display: flex;
+  justify-content: center;
+}
+
+/* List: hangs just under the name, out of flow for the same reason. */
+.list-name-stack {
+  position: relative;
+  min-width: 140px;
+}
+
+.list-name-stack .list-name {
+  min-width: 0;
+}
+
+.list-playbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 6px;
+}
+
+.list-playbar .playback-bar--inline {
+  width: 100%;
+  max-width: 160px;
+}
+
+/* Drag image for a multi-item drag. Created off-screen just long enough for the
+   browser to snapshot it. */
+.drag-count-badge {
+  position: fixed;
+  top: -100px;
+  left: -100px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #007AFF);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Drag-to-select box. Positioned in the scrolling content's coordinates. */
+.marquee-selection {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: 6px;
+  background: rgba(0, 122, 255, 0.14);
+  border: 1px solid rgba(0, 122, 255, 0.7);
+}

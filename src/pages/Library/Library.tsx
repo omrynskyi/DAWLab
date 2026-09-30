@@ -30,8 +30,13 @@ import {
 } from '@/lib/facets';
 import type { Facet } from '@/lib/facets';
 import { buildTagSuggestions } from '@/lib/tags';
+import { moveBlockNextTo } from '@/lib/reorder';
+import { useMarqueeSelect } from '@/hooks/useMarqueeSelect';
 import { useLibraryPreview } from '@/hooks/useLibraryPreview';
 import { FolderPeek } from '@/components/FolderPeek';
+import { PlaybackBar } from '@/components/PlaybackBar';
+import { QuickLook } from '@/components/QuickLook';
+import type { QuickLookDetail } from '@/components/QuickLook';
 import { DitherGradient, EMPTY_LIBRARY_DITHER } from '@/components/ui/DitherGradient';
 import { FoundProjectsBanner, FoundProjectsPanel } from '@/components/FoundProjects';
 import type { FoundProject } from '@/components/FoundProjects';
@@ -123,7 +128,13 @@ export const Library: React.FC = () => {
   const folderClickTimer = useRef<number | null>(null);
 
   // Drag and Drop State
-  const [draggedItem, setDraggedItem] = useState<{ type: 'project' | 'folder' | 'audio'; id: string } | null>(null);
+  // `group` is every item travelling with the grabbed one: the whole selection when
+  // the grabbed item is part of a multi-selection, otherwise just the item itself.
+  const [draggedItem, setDraggedItem] = useState<{
+    type: 'project' | 'folder' | 'audio';
+    id: string;
+    group: Array<{ kind: 'project' | 'audio'; id: string }>;
+  } | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
   // OS file drag-and-drop: dropping a folder/file from Finder onto the library
@@ -196,7 +207,19 @@ export const Library: React.FC = () => {
 
   // Inline audio preview (single shared player, one item at a time — projects and
   // imported audio share the same element, so only one ever plays).
-  const { playingId, loadingId, toggle: togglePreview, toggleAudio, stop: stopPreview } = useLibraryPreview();
+  const {
+    playingId, loadingId, activeId, status: playbackStatus, dismissStatus, retry: retryPlayback,
+    toggle: togglePreview, toggleAudio, play: playPreview, playAudio, pause: pausePlayback,
+    seek: seekPlayback, getElement: getAudioElement, stop: stopPreview,
+  } = useLibraryPreview();
+
+  // Selection (click / Shift-range / Cmd-toggle). Keys are `${kind}:${id}` — the same
+  // shape viewOrder uses. `focus` is the item Space acts on (the last one clicked).
+  const [selection, setSelection] = useState<{ keys: Set<string>; anchor: string | null; focus: string | null }>(
+    { keys: new Set(), anchor: null, focus: null }
+  );
+  // The item whose Quick Look panel is open. Closing it never stops playback.
+  const [quickLook, setQuickLook] = useState<{ kind: 'project' | 'audio'; id: string } | null>(null);
 
   // Tag state
   const [tagColors, setTagColors] = useState<Record<string, string>>({});
@@ -237,6 +260,8 @@ export const Library: React.FC = () => {
         hasPreview: boolean;
         previewCommitId: string | null;
         previewFile: string | null;
+        previewCommitMessage: string | null;
+        previewCommitTimestamp: string | null;
       }> = await window.ipcRenderer.invoke('get-project-facets').catch(() => ({}));
 
       const convertedProjects: Project[] = dawvcsProjects.map((p: any, index: number) => {
@@ -259,6 +284,8 @@ export const Library: React.FC = () => {
           hasPreview: facets?.hasPreview ?? false,
           previewCommitId: facets?.previewCommitId ?? null,
           previewFile: facets?.previewFile ?? null,
+          previewCommitMessage: facets?.previewCommitMessage ?? null,
+          previewCommitTimestamp: facets?.previewCommitTimestamp ?? null,
         };
       });
       setProjects(convertedProjects);
@@ -553,10 +580,41 @@ export const Library: React.FC = () => {
   // Drag and Drop Handlers
   // =======================
 
-  const handleDragStart = (e: React.DragEvent, type: 'project' | 'folder' | 'audio', id: string) => {
-    setDraggedItem({ type, id });
-    e.dataTransfer.effectAllowed = 'move';
+  // The grabbed item plus, when it belongs to a multi-selection, the rest of the
+  // selection — in on-screen order so the block keeps its arrangement.
+  const buildDragGroup = (type: 'project' | 'folder' | 'audio', id: string) => {
+    if (type === 'folder') return [];
+    const key = `${type}:${id}`;
+    if (!selection.keys.has(key) || selection.keys.size < 2) return [{ kind: type, id }];
+    return viewOrder
+      .filter((i): i is { kind: 'project' | 'audio'; id: string } => i.kind !== 'folder' && selection.keys.has(`${i.kind}:${i.id}`));
   };
+
+  const handleDragStart = (e: React.DragEvent, type: 'project' | 'folder' | 'audio', id: string) => {
+    const group = buildDragGroup(type, id);
+    // Grabbing something outside the selection drags (and selects) just that item.
+    if (type !== 'folder' && !selection.keys.has(`${type}:${id}`)) {
+      setSelection({ keys: new Set([`${type}:${id}`]), anchor: `${type}:${id}`, focus: `${type}:${id}` });
+    }
+    setDraggedItem({ type, id, group });
+    e.dataTransfer.effectAllowed = 'move';
+
+    if (group.length > 1) {
+      // Drag image: a count badge, so it's clear several items are travelling together.
+      const badge = document.createElement('div');
+      badge.className = 'drag-count-badge';
+      badge.textContent = `${group.length} items`;
+      document.body.appendChild(badge);
+      e.dataTransfer.setDragImage(badge, 24, 16);
+      setTimeout(() => badge.remove(), 0);
+    }
+  };
+
+  const isBeingDragged = (kind: 'project' | 'folder' | 'audio', id: string): boolean =>
+    !!draggedItem && (
+      (draggedItem.type === kind && draggedItem.id === id) ||
+      draggedItem.group.some(g => g.kind === kind && g.id === id)
+    );
 
   const isDescendant = (potentialDescendantId: string, ancestorId: string): boolean => {
     let current = folders.find(f => f.id === potentialDescendantId);
@@ -569,49 +627,54 @@ export const Library: React.FC = () => {
 
   const handleDragEnterItem = (targetId: string, targetKind: 'folder' | 'project' | 'audio') => {
     if (!draggedItem) return;
-    if (draggedItem.id === targetId && draggedItem.type === targetKind) return;
+    if (isBeingDragged(targetKind, targetId)) return;
     if (targetKind === 'folder') {
       // Show "drop into folder" indicator instead of reordering
       setDragOverFolderId(targetId as string);
       return;
     }
     setDragOverFolderId(null);
-    setViewOrder(prev => {
-      const draggedIdx = prev.findIndex(item => item.id === draggedItem.id && item.kind === draggedItem.type);
-      const targetIdx = prev.findIndex(item => item.id === targetId && item.kind === targetKind);
-      if (draggedIdx === -1 || targetIdx === -1) return prev;
-      const result = [...prev];
-      result.splice(draggedIdx, 1);
-      // After removal, recalculate target index; insert after target if coming from before it
-      const newTargetIdx = result.findIndex(item => item.id === targetId && item.kind === targetKind);
-      const insertAt = draggedIdx < targetIdx ? newTargetIdx + 1 : newTargetIdx;
-      result.splice(insertAt, 0, { kind: draggedItem.type, id: draggedItem.id });
-      return result;
-    });
+    setViewOrder(prev => moveBlockNextTo(
+      prev,
+      { kind: draggedItem.type, id: draggedItem.id },
+      draggedItem.group.length > 1 ? draggedItem.group : [{ kind: draggedItem.type, id: draggedItem.id }],
+      { kind: targetKind, id: targetId },
+    ));
+  };
+
+  // Move the dragged item — or its whole multi-selection group — into a folder
+  // (null = the library root). Used by folder tiles and the breadcrumbs.
+  const moveDraggedTo = (targetFolderId: string | null) => {
+    if (!draggedItem) return;
+
+    if (draggedItem.type === 'folder') {
+      // Don't move a folder into itself or its descendant
+      if (targetFolderId && (draggedItem.id === targetFolderId || isDescendant(targetFolderId, draggedItem.id))) return;
+      setFolders(prev => prev.map(f => f.id === draggedItem.id ? { ...f, parentId: targetFolderId } : f));
+      window.ipcRenderer.invoke('move-folder', draggedItem.id, targetFolderId);
+      // Moved to a different folder context, so it leaves the current view
+      setViewOrder(prev => prev.filter(item => !(item.id === draggedItem.id && item.kind === 'folder')));
+      return;
+    }
+
+    const projectIds = new Set(draggedItem.group.filter(g => g.kind === 'project').map(g => g.id));
+    const audioIds = new Set(draggedItem.group.filter(g => g.kind === 'audio').map(g => g.id));
+    if (projectIds.size) {
+      setProjects(prev => prev.map(p => projectIds.has(p.id) ? { ...p, folderId: targetFolderId } : p));
+      projectIds.forEach(id => window.ipcRenderer.invoke('move-project-to-folder', id, targetFolderId));
+    }
+    if (audioIds.size) {
+      setAudioItems(prev => prev.map(a => audioIds.has(a.id) ? { ...a, folderId: targetFolderId } : a));
+      audioIds.forEach(id => window.ipcRenderer.invoke('move-audio-item-to-folder', id, targetFolderId));
+    }
+    setViewOrder(prev => prev.filter(item => !isBeingDragged(item.kind, item.id)));
   };
 
   const handleDropOnFolder = (e: React.DragEvent, targetFolderId: string) => {
     e.stopPropagation();
     e.preventDefault();
     setDragOverFolderId(null);
-    if (!draggedItem) { setDraggedItem(null); return; }
-    // Don't move a folder into itself or its descendant
-    if (draggedItem.type === 'folder' && (draggedItem.id === targetFolderId || isDescendant(targetFolderId, draggedItem.id as string))) {
-      setDraggedItem(null);
-      return;
-    }
-    if (draggedItem.type === 'project') {
-      setProjects(prev => prev.map(p => p.id === draggedItem.id ? { ...p, folderId: targetFolderId } : p));
-      window.ipcRenderer.invoke('move-project-to-folder', draggedItem.id, targetFolderId);
-    } else if (draggedItem.type === 'audio') {
-      setAudioItems(prev => prev.map(a => a.id === draggedItem.id ? { ...a, folderId: targetFolderId } : a));
-      window.ipcRenderer.invoke('move-audio-item-to-folder', draggedItem.id, targetFolderId);
-    } else {
-      setFolders(prev => prev.map(f => f.id === draggedItem.id ? { ...f, parentId: targetFolderId } : f));
-      window.ipcRenderer.invoke('move-folder', draggedItem.id, targetFolderId);
-    }
-    // Remove from current viewOrder since it moved to a different folder context
-    setViewOrder(prev => prev.filter(item => !(item.id === draggedItem.id && item.kind === draggedItem.type)));
+    moveDraggedTo(targetFolderId);
     setDraggedItem(null);
   };
 
@@ -1003,6 +1066,149 @@ export const Library: React.FC = () => {
     </button>
   );
 
+  // -----------------------
+  // Selection & Quick Look
+  // -----------------------
+
+  // Projects and audio items can be selected and auditioned; folders can't.
+  const selectableKeys = useMemo(
+    () => viewOrder.filter(i => i.kind !== 'folder').map(i => `${i.kind}:${i.id}`),
+    [viewOrder]
+  );
+
+  const handleItemSelect = (e: React.MouseEvent, kind: 'project' | 'audio', id: string) => {
+    const key = `${kind}:${id}`;
+    setSelection(prev => {
+      if (e.shiftKey && prev.anchor) {
+        const a = selectableKeys.indexOf(prev.anchor);
+        const b = selectableKeys.indexOf(key);
+        if (a !== -1 && b !== -1) {
+          const [lo, hi] = a < b ? [a, b] : [b, a];
+          return { keys: new Set(selectableKeys.slice(lo, hi + 1)), anchor: prev.anchor, focus: key };
+        }
+      }
+      if (e.metaKey || e.ctrlKey) {
+        const next = new Set(prev.keys);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return { keys: next, anchor: key, focus: next.has(key) ? key : (Array.from(next).pop() ?? null) };
+      }
+      return { keys: new Set([key]), anchor: key, focus: key };
+    });
+  };
+
+  // Clicking anywhere in the content area that isn't a card or control clears the selection.
+  const handleGridBackgroundClick = (e: React.MouseEvent) => {
+    if (consumeMarqueeClick()) return; // the click that ends a drag-select
+    if ((e.target as HTMLElement).closest('.library-item, .list-row, button, input, a, .recently-saved-toast, .folder-peek')) return;
+    setSelection(prev => (prev.keys.size ? { keys: new Set(), anchor: null, focus: null } : prev));
+  };
+
+  // Drop selection / Quick Look for anything no longer on screen (folder change,
+  // search, filter, delete).
+  useEffect(() => {
+    const visible = new Set(selectableKeys);
+    setSelection(prev => {
+      const kept = Array.from(prev.keys).filter(k => visible.has(k));
+      if (kept.length === prev.keys.size && (!prev.focus || visible.has(prev.focus))) return prev;
+      return {
+        keys: new Set(kept),
+        anchor: prev.anchor && visible.has(prev.anchor) ? prev.anchor : null,
+        focus: prev.focus && visible.has(prev.focus) ? prev.focus : (kept[kept.length - 1] ?? null),
+      };
+    });
+    setQuickLook(prev => (prev && !visible.has(`${prev.kind}:${prev.id}`) ? null : prev));
+  }, [selectableKeys]);
+
+  const overlaysOpen =
+    showNewFolderModal || showNewProjectModal || showRenameModal || showAudioRenameModal ||
+    showDeleteConfirm || showFoundPanel || showAddMenu || showFilterMenu ||
+    !!contextMenu || !!tagPopover || !!peek || !!dropInit;
+
+  // Drag-to-select: press on empty space and sweep a box over cards. Shift/Cmd keeps
+  // the current selection and adds to it.
+  const contentRef = useRef<HTMLElement>(null);
+  const { marquee, onMouseDown: onMarqueeMouseDown, consumeClick: consumeMarqueeClick } = useMarqueeSelect({
+    containerRef: contentRef,
+    enabled: !overlaysOpen,
+    onChange: (keys, additive) => {
+      setSelection(prev => {
+        const union = additive ? new Set([...prev.keys, ...keys]) : new Set(keys);
+        const last = keys[keys.length - 1] ?? null;
+        return {
+          keys: union,
+          anchor: keys[0] ?? (additive ? prev.anchor : null),
+          focus: last ?? (additive ? prev.focus : null),
+        };
+      });
+    },
+  });
+
+  // Space opens Quick Look on the focused item and plays it (if it has audio);
+  // Space again closes it while the audio keeps playing. Esc closes it, then
+  // clears the selection.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (overlaysOpen) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+
+      if (e.key === 'Escape') {
+        if (!quickLook) setSelection(prev => (prev.keys.size ? { keys: new Set(), anchor: null, focus: null } : prev));
+        return;
+      }
+      if (e.code !== 'Space' || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+
+      // Handled here, so a focused button (e.g. the play button just clicked)
+      // must not also treat Space as a click.
+      e.preventDefault();
+      target?.blur?.();
+
+      if (quickLook) {
+        setQuickLook(null);
+        return;
+      }
+      if (!selection.focus) return;
+      const sep = selection.focus.indexOf(':');
+      const kind = selection.focus.slice(0, sep);
+      const id = selection.focus.slice(sep + 1);
+      if (kind === 'project') {
+        const project = projects.find(p => p.id === id);
+        if (!project?.hasPreview) return; // nothing to play or show yet
+        void playPreview(project);
+        setQuickLook({ kind: 'project', id });
+      } else if (kind === 'audio') {
+        const audio = audioItems.find(a => a.id === id);
+        if (!audio) return;
+        void playAudio(audio);
+        setQuickLook({ kind: 'audio', id });
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [overlaysOpen, quickLook, selection.focus, projects, audioItems, playPreview, playAudio]);
+
+  const quickLookProject = quickLook?.kind === 'project' ? projects.find(p => p.id === quickLook.id) : undefined;
+  const quickLookAudio = quickLook?.kind === 'audio' ? audioItems.find(a => a.id === quickLook.id) : undefined;
+
+  const formatCommitDate = (iso?: string | null): string | null => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+  };
+
+  // Progress bar shown on a card while its audio is loaded (playing or paused).
+  const renderTileBar = (id: string) =>
+    activeId === id ? (
+      <div className="item-playbar"><PlaybackBar getElement={getAudioElement} /></div>
+    ) : null;
+  const renderListBar = (id: string) =>
+    activeId === id ? (
+      <div className="list-playbar"><PlaybackBar getElement={getAudioElement} /></div>
+    ) : null;
+
   // Sync viewOrder when the folder/data changes
   useEffect(() => {
     if (loading) return;
@@ -1200,7 +1406,14 @@ export const Library: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="library-content" onContextMenu={handleEmptyContextMenu}>
+      <main
+        ref={contentRef}
+        className="library-content"
+        onMouseDown={onMarqueeMouseDown}
+        onClick={handleGridBackgroundClick}
+        onContextMenu={handleEmptyContextMenu}
+      >
+        {marquee && <div className="marquee-selection" style={marquee} />}
 
         {/* Recently Saved Notification */}
         {recentlySavedProject && !currentFolderId && !recentlySavedDismissed && (
@@ -1276,14 +1489,7 @@ export const Library: React.FC = () => {
                  onDragLeave={(e) => { e.currentTarget.removeAttribute('data-drag-over'); }}
                  onDrop={(e) => {
                    e.currentTarget.removeAttribute('data-drag-over');
-                   if (!draggedItem) return;
-                   if (draggedItem.type === 'project') {
-                     setProjects(prev => prev.map(p => p.id === draggedItem.id ? { ...p, folderId: null } : p));
-                     window.ipcRenderer.invoke('move-project-to-folder', draggedItem.id, null);
-                   } else {
-                     setFolders(prev => prev.map(f => f.id === draggedItem.id ? { ...f, parentId: null } : f));
-                     window.ipcRenderer.invoke('move-folder', draggedItem.id, null);
-                   }
+                   moveDraggedTo(null);
                    setDraggedItem(null);
                  }}
                >
@@ -1299,16 +1505,7 @@ export const Library: React.FC = () => {
                       onDragLeave={(e) => { e.currentTarget.removeAttribute('data-drag-over'); }}
                       onDrop={(e) => {
                         e.currentTarget.removeAttribute('data-drag-over');
-                        if (!draggedItem || !crumb.id) return;
-                        if (draggedItem.type === 'project') {
-                          setProjects(prev => prev.map(p => p.id === draggedItem.id ? { ...p, folderId: crumb.id } : p));
-                          window.ipcRenderer.invoke('move-project-to-folder', draggedItem.id, crumb.id);
-                        } else {
-                          if (draggedItem.id !== crumb.id && !isDescendant(crumb.id, draggedItem.id as string)) {
-                            setFolders(prev => prev.map(f => f.id === draggedItem.id ? { ...f, parentId: crumb.id } : f));
-                            window.ipcRenderer.invoke('move-folder', draggedItem.id, crumb.id);
-                          }
-                        }
+                        if (crumb.id) moveDraggedTo(crumb.id);
                         setDraggedItem(null);
                       }}
                     >
@@ -1390,13 +1587,15 @@ export const Library: React.FC = () => {
                       return (
                         <div
                           key={`audio-${audio.id}`}
-                          className={`library-item project audio-item${draggedItem?.id === audio.id && draggedItem?.type === 'audio' ? ' dragging' : ''}${playingId === audio.id ? ' playing' : ''}`}
+                          data-select-key={`audio:${audio.id}`}
+                          className={`library-item project audio-item${isBeingDragged('audio', audio.id) ? ' dragging' : ''}${playingId === audio.id ? ' playing' : ''}${selection.keys.has(`audio:${audio.id}`) ? ' selected' : ''}`}
                           draggable={true}
                           onDragStart={(e) => handleDragStart(e, 'audio', audio.id)}
                           onDragEnter={() => handleDragEnterItem(audio.id, 'audio')}
                           onDragOver={(e) => { e.stopPropagation(); e.preventDefault(); }}
                           onDrop={(e) => { e.stopPropagation(); e.preventDefault(); saveViewOrder(); setDraggedItem(null); }}
                           onDragEnd={handleDragEnd}
+                          onClick={(e) => handleItemSelect(e, 'audio', audio.id)}
                           onDoubleClick={() => toggleAudio(audio)}
                           onContextMenu={(e) => handleAudioContextMenu(e, audio.id)}
                         >
@@ -1416,6 +1615,7 @@ export const Library: React.FC = () => {
                                )}
                              </button>
                           </div>
+                          {renderTileBar(audio.id)}
                           <span className="item-label">{audio.name}</span>
                           <span className="item-sublabel">{audioMetaLine(audio)}</span>
                         </div>
@@ -1426,13 +1626,15 @@ export const Library: React.FC = () => {
                       return (
                         <div
                           key={`project-${project.id}`}
-                          className={`library-item project${draggedItem?.id === project.id && draggedItem?.type === 'project' ? ' dragging' : ''}${playingId === project.id ? ' playing' : ''}`}
+                          data-select-key={`project:${project.id}`}
+                          className={`library-item project${isBeingDragged('project', project.id) ? ' dragging' : ''}${playingId === project.id ? ' playing' : ''}${selection.keys.has(`project:${project.id}`) ? ' selected' : ''}`}
                           draggable={true}
                           onDragStart={(e) => handleDragStart(e, 'project', project.id)}
                           onDragEnter={() => handleDragEnterItem(project.id, 'project')}
                           onDragOver={(e) => { e.stopPropagation(); e.preventDefault(); }}
                           onDrop={(e) => { e.stopPropagation(); e.preventDefault(); saveViewOrder(); setDraggedItem(null); }}
                           onDragEnd={handleDragEnd}
+                          onClick={(e) => handleItemSelect(e, 'project', project.id)}
                           onDoubleClick={() => openProject(project.id, project.name)}
                           onContextMenu={(e) => handleProjectContextMenu(e, project.id)}
                         >
@@ -1458,6 +1660,7 @@ export const Library: React.FC = () => {
                                </button>
                              )}
                           </div>
+                          {renderTileBar(project.id)}
                           <span className="item-label">{project.name}</span>
                           <span className="item-sublabel">{projectMetaLine(project)}</span>
                           {(project.tags || []).length > 0 && (
@@ -1530,13 +1733,15 @@ export const Library: React.FC = () => {
                       return (
                         <div
                           key={`audio-${audio.id}`}
-                          className={`list-row${draggedItem?.id === audio.id && draggedItem?.type === 'audio' ? ' dragging' : ''}${playingId === audio.id ? ' playing' : ''}`}
+                          data-select-key={`audio:${audio.id}`}
+                          className={`list-row${isBeingDragged('audio', audio.id) ? ' dragging' : ''}${playingId === audio.id ? ' playing' : ''}${selection.keys.has(`audio:${audio.id}`) ? ' selected' : ''}`}
                           draggable={true}
                           onDragStart={(e) => handleDragStart(e, 'audio', audio.id)}
                           onDragEnter={() => handleDragEnterItem(audio.id, 'audio')}
                           onDragOver={(e) => { e.stopPropagation(); e.preventDefault(); }}
                           onDrop={(e) => { e.stopPropagation(); e.preventDefault(); saveViewOrder(); setDraggedItem(null); }}
                           onDragEnd={handleDragEnd}
+                          onClick={(e) => handleItemSelect(e, 'audio', audio.id)}
                           onDoubleClick={() => toggleAudio(audio)}
                           onContextMenu={(e) => handleAudioContextMenu(e, audio.id)}
                         >
@@ -1556,7 +1761,10 @@ export const Library: React.FC = () => {
                                )}
                              </button>
                           </div>
-                          <span className="list-name">{audio.name}</span>
+                          <div className="list-name-stack">
+                            <span className="list-name">{audio.name}</span>
+                            {renderListBar(audio.id)}
+                          </div>
                           <div className="list-meta">
                             <span className="list-meta-label">Audio</span>
                             <span className="list-meta-value">{(audio.ext || '').replace(/^\./, '').toUpperCase()}</span>
@@ -1577,13 +1785,15 @@ export const Library: React.FC = () => {
                       return (
                         <div
                           key={`project-${project.id}`}
-                          className={`list-row${draggedItem?.id === project.id && draggedItem?.type === 'project' ? ' dragging' : ''}${playingId === project.id ? ' playing' : ''}`}
+                          data-select-key={`project:${project.id}`}
+                          className={`list-row${isBeingDragged('project', project.id) ? ' dragging' : ''}${playingId === project.id ? ' playing' : ''}${selection.keys.has(`project:${project.id}`) ? ' selected' : ''}`}
                           draggable={true}
                           onDragStart={(e) => handleDragStart(e, 'project', project.id)}
                           onDragEnter={() => handleDragEnterItem(project.id, 'project')}
                           onDragOver={(e) => { e.stopPropagation(); e.preventDefault(); }}
                           onDrop={(e) => { e.stopPropagation(); e.preventDefault(); saveViewOrder(); setDraggedItem(null); }}
                           onDragEnd={handleDragEnd}
+                          onClick={(e) => handleItemSelect(e, 'project', project.id)}
                           onDoubleClick={() => openProject(project.id, project.name)}
                           onContextMenu={(e) => handleProjectContextMenu(e, project.id)}
                         >
@@ -1609,7 +1819,10 @@ export const Library: React.FC = () => {
                                </button>
                              )}
                           </div>
-                          <span className="list-name">{project.name}</span>
+                          <div className="list-name-stack">
+                            <span className="list-name">{project.name}</span>
+                            {renderListBar(project.id)}
+                          </div>
                           <div className="list-meta">
                             <span className="list-meta-label">Last commit:</span>
                             <span className="list-meta-value">
@@ -1774,6 +1987,64 @@ export const Library: React.FC = () => {
           }
         }}
       />
+
+      {/* Quick Look: Space on a selected project or audio item */}
+      {quickLookProject && (
+        <QuickLook
+          title={quickLookProject.name}
+          icon={getProjectIcon(quickLookProject.daw)
+            ? <img src={getProjectIcon(quickLookProject.daw)!} alt={quickLookProject.daw} />
+            : <Music size={72} />}
+          details={[
+            shortDaw(quickLookProject.daw) && { label: 'DAW', value: shortDaw(quickLookProject.daw) },
+            quickLookProject.bpm != null && quickLookProject.bpm > 0 && { label: 'BPM', value: String(Math.round(quickLookProject.bpm)) },
+            quickLookProject.trackCount != null && quickLookProject.trackCount > 0 && { label: 'Tracks', value: String(quickLookProject.trackCount) },
+          ].filter((d): d is QuickLookDetail => !!d)}
+          commit={quickLookProject.previewCommitId ? {
+            id: quickLookProject.previewCommitId,
+            message: quickLookProject.previewCommitMessage ?? null,
+            date: formatCommitDate(quickLookProject.previewCommitTimestamp),
+          } : undefined}
+          isPlaying={playingId === quickLookProject.id}
+          isLoading={loadingId === quickLookProject.id}
+          onTogglePlay={() => (playingId === quickLookProject.id ? pausePlayback() : playPreview(quickLookProject))}
+          onSeek={seekPlayback}
+          getElement={getAudioElement}
+          onClose={() => setQuickLook(null)}
+        />
+      )}
+      {quickLookAudio && (
+        <QuickLook
+          title={quickLookAudio.name}
+          icon={<AudioLines size={72} />}
+          details={[
+            { label: 'Format', value: (quickLookAudio.ext || '').replace(/^\./, '').toUpperCase() || 'Audio' },
+            ...(formatCommitDate(quickLookAudio.addedAt) ? [{ label: 'Added', value: formatCommitDate(quickLookAudio.addedAt)! }] : []),
+          ]}
+          isPlaying={playingId === quickLookAudio.id}
+          isLoading={loadingId === quickLookAudio.id}
+          onTogglePlay={() => (playingId === quickLookAudio.id ? pausePlayback() : playAudio(quickLookAudio))}
+          onSeek={seekPlayback}
+          getElement={getAudioElement}
+          onClose={() => setQuickLook(null)}
+        />
+      )}
+
+      {/* Playback failure / fallback notice */}
+      {playbackStatus && (
+        <div
+          className={`playback-toast playback-toast--${playbackStatus.kind}`}
+          role={playbackStatus.kind === 'error' ? 'alert' : 'status'}
+        >
+          <span className="playback-toast__text">{playbackStatus.text}</span>
+          {playbackStatus.canRetry && (
+            <button className="playback-toast__action" onClick={retryPlayback}>Retry</button>
+          )}
+          <button className="playback-toast__close" onClick={dismissStatus} aria-label="Dismiss">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* New Projects Found — review panel */}
       {showFoundPanel && (

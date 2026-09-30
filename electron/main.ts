@@ -5,7 +5,6 @@ import {
   dialog,
   shell,
   protocol,
-  net,
 } from "electron";
 import {
   initProject,
@@ -62,6 +61,9 @@ import { startDraftWatch, stopDraftWatch, stopAllDraftWatches } from "./watchers
 import { fileURLToPath } from "node:url";
 
 import path from "node:path";
+import { Readable } from "node:stream";
+import { getMediaUrl, stopMediaServer } from "./media/server";
+import { audioMimeType, resolveRange } from "./media/range";
 import fs from "node:fs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -260,6 +262,7 @@ app.on("window-all-closed", () => {
 // Tear down any active file watchers before the app exits.
 app.on("before-quit", () => {
   stopAllDraftWatches();
+  stopMediaServer();
 });
 
 app.on("activate", () => {
@@ -279,52 +282,53 @@ app.whenReady().then(() => {
     console.warn("[main.ts] Failed to initialize username:", err);
   }
 
-  // Register dawpreview protocol for audio previews
+  // Register dawpreview protocol. Used for fetching audio bytes (e.g. peak
+  // computation). Playback goes through the loopback media server instead —
+  // <audio> can't seek or resume over a custom protocol (see media/server.ts).
   protocol.handle("dawpreview", async (request) => {
     const url = new URL(request.url);
     const filePath = decodeURIComponent(url.pathname);
-
-    // Correctly format the file path
     const normalizedPath =
       process.platform === "win32" && filePath.startsWith("/")
         ? filePath.substring(1)
         : filePath;
 
-    const fileUrl = "file://" + normalizedPath;
-
+    let stats: fs.Stats;
     try {
-      // Get file size for Content-Length
-      const stats = fs.statSync(normalizedPath);
-      const fileSize = stats.size;
-      const response = await net.fetch(fileUrl);
-      const extension = path.extname(normalizedPath).toLowerCase();
-
-      const mimeTypes: Record<string, string> = {
-        ".mp3": "audio/mpeg",
-        ".wav": "audio/wav",
-        ".aif": "audio/x-aiff",
-        ".aiff": "audio/x-aiff",
-        ".flac": "audio/flac",
-        ".m4a": "audio/mp4",
-        ".ogg": "audio/ogg",
-      };
-
-      const mimeType = mimeTypes[extension] || "audio/mpeg";
-
-      const headers = new Headers(response.headers);
-      headers.set("Content-Type", mimeType);
-      headers.set("Content-Length", fileSize.toString());
-      headers.set("Accept-Ranges", "bytes");
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
-    } catch (error) {
-      console.error("[Protocol] Error:", error);
-      return net.fetch(fileUrl);
+      stats = await fs.promises.stat(normalizedPath);
+      if (!stats.isFile()) throw new Error("not a file");
+    } catch {
+      return new Response("Audio file not found", { status: 404 });
     }
+
+    const size = stats.size;
+    const range = resolveRange(request.headers.get("range"), size);
+    const baseHeaders = {
+      "Content-Type": audioMimeType(path.extname(normalizedPath)),
+      "Accept-Ranges": "bytes",
+    };
+    if (range.kind === "unsatisfiable") {
+      return new Response(null, {
+        status: 416,
+        headers: { ...baseHeaders, "Content-Range": `bytes */${size}` },
+      });
+    }
+
+    const partial = range.kind === "partial";
+    const headers: Record<string, string> = {
+      ...baseHeaders,
+      "Content-Length": String(size === 0 ? 0 : range.end - range.start + 1),
+    };
+    if (partial) headers["Content-Range"] = `bytes ${range.start}-${range.end}/${size}`;
+
+    if (request.method === "HEAD" || size === 0) {
+      return new Response(null, { status: partial ? 206 : 200, headers });
+    }
+
+    const stream = Readable.toWeb(
+      fs.createReadStream(normalizedPath, { start: range.start, end: range.end }),
+    ) as ReadableStream;
+    return new Response(stream, { status: partial ? 206 : 200, headers });
   });
 
   // Pre-scan plugins in the background so cache is warm
@@ -621,7 +625,11 @@ ipcMain.handle(
       ? commitFilePath
       : getCasPath(fileName, casDir);
 
-    return `dawpreview://active${fullPath.startsWith("/") ? "" : "/"}${fullPath}`;
+    // A missing file resolves to null so the renderer can surface a clear error
+    // instead of pointing the <audio> element at a URL that will 404.
+    if (!fs.existsSync(fullPath)) return null;
+
+    return getMediaUrl(fullPath);
   },
 );
 
@@ -1530,13 +1538,12 @@ ipcMain.handle(
   },
 );
 
-// Resolve an audio item to a dawpreview:// URL the renderer can stream/play.
+// Resolve an audio item to a URL the renderer can stream/play/seek.
 ipcMain.handle("get-audio-url", async (_ev, id: string) => {
   const manager = getUserConfigManager(getUsername());
   const item = manager.getAudioItems().find((a) => a.id === id);
-  if (!item) return null;
-  const fullPath = item.filePath;
-  return `dawpreview://active${fullPath.startsWith("/") ? "" : "/"}${fullPath}`;
+  if (!item || !fs.existsSync(item.filePath)) return null;
+  return getMediaUrl(item.filePath);
 });
 
 // Delete an audio item: remove the config entry and its copied file on disk.

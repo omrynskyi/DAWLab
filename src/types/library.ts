@@ -23,6 +23,8 @@ export type Project = {
     hasPreview?: boolean;
     previewCommitId?: string | null;
     previewFile?: string | null;
+    previewCommitMessage?: string | null;
+    previewCommitTimestamp?: string | null;
 };
 
 export type Folder = {

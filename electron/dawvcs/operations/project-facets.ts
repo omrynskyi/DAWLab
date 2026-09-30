@@ -26,6 +26,10 @@ export interface ProjectFacetData {
     previewCommitId: string | null;
     /** Filename of the audio preview on `previewCommitId`, needed to build its dawpreview:// URL. */
     previewFile: string | null;
+    /** Message of `previewCommitId`, shown in the Library's Quick Look panel. */
+    previewCommitMessage: string | null;
+    /** ISO timestamp of `previewCommitId`. */
+    previewCommitTimestamp: string | null;
 }
 
 /** A commit as stored in the log — includes `preview_file`, which the shared ProjectLog type omits. */
@@ -43,6 +47,8 @@ export function deriveProjectFacetData(log: ProjectLog | null | undefined): Proj
         hasPreview: false,
         previewCommitId: null,
         previewFile: null,
+        previewCommitMessage: null,
+        previewCommitTimestamp: null,
     };
     if (!log) return empty;
 
@@ -85,6 +91,8 @@ export function deriveProjectFacetData(log: ProjectLog | null | undefined): Proj
         hasPreview: Boolean(previewCommit),
         previewCommitId: previewCommit?.commit_id ?? null,
         previewFile: previewCommit?.preview_file ?? null,
+        previewCommitMessage: previewCommit?.message ?? null,
+        previewCommitTimestamp: previewCommit?.timestamp ?? null,
     };
 }
 

@@ -17,6 +17,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "motion/react";
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { ProjectLog } from "@/types/project.types";
+import { applyAudioSettings } from "@/lib/audioOutput";
 import { CommitGraph } from "@/components/CommitGraph";
 import { FileExplorer } from "@/components/FileExplorer/FileExplorer";
 import { PluginSection } from "@/components/PluginSection/PluginSection";
@@ -304,16 +305,24 @@ export const History: React.FC = () => {
 
     if (!isPlaying) {
       if (!audioUrl) {
-        const url = await window.ipcRenderer.invoke(
-          "get-preview-url",
-          passedProject,
-          activeCommit.commit_id,
-          activeCommit.preview_file,
-        );
-        setAudioUrl(url);
-        setIsPlaying(true);
+        try {
+          const url = await window.ipcRenderer.invoke(
+            "get-preview-url",
+            passedProject,
+            activeCommit.commit_id,
+            activeCommit.preview_file,
+          );
+          // null = the preview file is gone; don't point <audio> at a dead URL.
+          if (!url) {
+            console.error("Audio preview file not found for commit", activeCommit.commit_id);
+            return;
+          }
+          setAudioUrl(url);
+          setIsPlaying(true);
+        } catch (err) {
+          console.error("Failed to resolve audio preview:", err);
+        }
       } else if (audioRef.current) {
-        audioRef.current.play();
         setIsPlaying(true);
       }
     } else if (audioRef.current) {
@@ -322,17 +331,23 @@ export const History: React.FC = () => {
     }
   };
 
-  // Sync isPlaying state with audio element
+  // Sync isPlaying state with audio element. A failed play() (dead source, output
+  // device error) must reset the button rather than leave it stuck on "playing".
   useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying && audioUrl) {
-        audioRef.current
-          .play()
-          .catch((e) => console.error("Audio play failed:", e));
-      } else {
-        audioRef.current.pause();
-      }
+    const el = audioRef.current;
+    if (!el) return;
+    if (isPlaying && audioUrl) {
+      let cancelled = false;
+      applyAudioSettings(el)
+        .then(() => (cancelled ? undefined : el.play()))
+        .catch((e) => {
+          if (cancelled || e?.name === "AbortError") return;
+          console.error("Audio play failed:", e);
+          setIsPlaying(false);
+        });
+      return () => { cancelled = true; };
     }
+    el.pause();
   }, [audioUrl, isPlaying]);
 
   // Cleanup/Reset audio on commit change
@@ -1732,6 +1747,7 @@ export const History: React.FC = () => {
                 onLoadedMetadata={onAudioLoadedMetadata}
                 onDurationChange={onAudioLoadedMetadata}
                 onEnded={onAudioEnded}
+                onError={() => { if (audioUrl) setIsPlaying(false); }}
                 style={{ display: "none" }}
               />
               <div
