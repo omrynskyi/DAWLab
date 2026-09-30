@@ -41,6 +41,7 @@ import {
 } from "@/components/WarningModal/WarningModal";
 import { StorageWarningModal } from "../../components/ui/StorageWarningModal";
 import FeedbackView, { type FeedbackHandoff, type FeedbackVersion } from "@/components/Feedback/FeedbackView";
+import { VersionComments } from "@/components/Feedback/VersionComments";
 import logo from "@/assets/logo.png";
 import logicLogo from "@/assets/logic_logo.png";
 import abletonLogo from "@/assets/ableton_logo.png";
@@ -48,12 +49,9 @@ import flLogo from "@/assets/fl_logo.png";
 import reaperLogo from "@/assets/reaper_logo.png";
 import protoolsLogo from "@/assets/protools_logo.svg";
 import { BranchMenu } from "@/components/BranchMenu/BranchMenu";
-import { ProjectProgress } from "@/components/ProjectProgress/ProjectProgress";
 import { TagChip } from "@/components/ui/TagChip";
 import { TagManagerPopover } from "@/components/TagManagerPopover/TagManagerPopover";
-import { useProjectState } from "@/hooks/useProjectState";
 import { buildTagSuggestions } from "@/lib/tags";
-import { openTaskCount } from "@/lib/projectState";
 import "./History.css";
 import { useUsername } from "@/hooks/useUsername";
 export const History: React.FC = () => {
@@ -78,7 +76,7 @@ export const History: React.FC = () => {
   const [focusedCommitId, setFocusedCommitId] = useState<string | null>(null);
   
   /** Mobile tab state for Files/Plugins toggle */
-  const [activeMobileTab, setActiveMobileTab] = useState<"files" | "plugins" | "tasks">(
+  const [activeMobileTab, setActiveMobileTab] = useState<"files" | "plugins" | "comments">(
     "files",
   );
 
@@ -171,9 +169,6 @@ export const History: React.FC = () => {
   // Whether the feedback view has taken playback over from this player yet.
   const feedbackTookOverRef = useRef(false);
   const feedbackClosingRef = useRef(false);
-
-  // ---- Project state (tasks, notepad) ----
-  const projectState = useProjectState(projectId);
 
   // ---- Version tags ----
   const [tagColors, setTagColors] = useState<Record<string, string>>({});
@@ -479,6 +474,22 @@ export const History: React.FC = () => {
       audioRef.current.pause();
       setIsPlaying(false);
     }
+  };
+
+  /** Plays the History player from `seconds` (e.g. a double-clicked comment). */
+  const playFrom = async (seconds: number) => {
+    const el = audioRef.current;
+    if (audioUrl && el) {
+      el.currentTime = seconds;
+      setCurrentTime(seconds);
+      setIsPlaying(true);
+      return;
+    }
+    // Not loaded yet: seek once metadata arrives (onAudioLoadedMetadata).
+    pendingSeekRef.current = seconds;
+    setCurrentTime(seconds);
+    if (await loadPreviewUrl()) setIsPlaying(true);
+    else pendingSeekRef.current = null;
   };
 
   // Sync isPlaying state with audio element. A failed play() (dead source, output
@@ -1916,14 +1927,13 @@ export const History: React.FC = () => {
                 )}
               </button>
               <button
-                onClick={() => setActiveMobileTab('tasks')}
+                onClick={() => setActiveMobileTab('comments')}
                 className={`pb-4 text-base font-medium transition-colors relative z-10 !bg-transparent !border-none !p-0 !rounded-none ${
-                  activeMobileTab === 'tasks' ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+                  activeMobileTab === 'comments' ? 'text-white' : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                Tasks
-                {openTaskCount(projectState.tasks) > 0 && ` (${openTaskCount(projectState.tasks)})`}
-                {activeMobileTab === "tasks" && (
+                Comments
+                {activeMobileTab === "comments" && (
                   <motion.div
                     layoutId="activeTab"
                     className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0094FF] shadow-[0_0_8px_rgba(0,148,255,0.5)]"
@@ -1967,21 +1977,23 @@ export const History: React.FC = () => {
               />
             </div>
 
-            {/* Tasks + Notepad (project-scoped) */}
+            {/* Comments on the active version (Tasks + Notepad are hidden for now) */}
             <div
               className={`
               flex-1 min-h-0
-              ${activeMobileTab === "tasks" ? "flex flex-col" : "hidden"}
+              ${activeMobileTab === "comments" ? "flex flex-col" : "hidden"}
               min-[900px]:flex min-[900px]:flex-col
-              overflow-y-auto
             `}
             >
-              <ProjectProgress
-                tasks={projectState.tasks}
-                onTasksChange={projectState.setTasks}
-                notepad={projectState.notepad}
-                onNotepadChange={projectState.setNotepad}
-                onNotepadBlur={projectState.flushNotepad}
+              <VersionComments
+                // Remount on entering/leaving full screen: flushes this panel's
+                // pending save before the overlay loads, and reloads after it.
+                key={`${activeCommit?.commit_id ?? "none"}-${feedbackSession ? "fs" : "docked"}`}
+                projectName={passedProject}
+                commitId={activeCommit?.preview_file ? String(activeCommit.commit_id) : null}
+                username={username || "You"}
+                currentTime={currentTime}
+                onPlayFrom={playFrom}
               />
             </div>
 

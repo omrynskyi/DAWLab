@@ -80,6 +80,52 @@
   background: none;
 }
 
+/* ── History comments panel (app only) ──
+   Framed like the History page's other panels (PluginSection, ProjectProgress). */
+.version-comments {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Safe area: dropzone height (70px) + bottom gap */
+  padding-bottom: 80px;
+}
+
+.feedback-page.version-comments__panel {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-card, #333333);
+  border-radius: 20px;
+}
+
+.feedback-page .version-comments__label {
+  flex-shrink: 0;
+  padding: 1rem 1rem 0;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.feedback-page.version-comments__panel .sidebar-comment-list {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+.feedback-page .version-comments__empty {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* ── Load error (app only) ── */
 .feedback-page .feedback-error {
   flex: 1;
