@@ -54,6 +54,7 @@ import { getProjectPath } from "./dawvcs/core/registry";
 import { saveProjectLog } from "./dawvcs/core/log";
 import { getCommitPath, getCommitFileMap } from "./dawvcs/core/commits";
 import { writeJsonSync } from "./dawvcs/core/fs-utils";
+import { parseCommentsFile, serializeComments } from "./feedback/comments-file";
 import { getProjectStorageDirs } from "./dawvcs/core/storage-location";
 import { detectDAW, getProjectFileCandidates } from "./dawvcs/core/daw-detection";
 import { getCleanableFiles, cleanCasFiles } from "./dawvcs/operations/clean";
@@ -668,15 +669,16 @@ function commentsPath(projectName: string, commitId: string): string {
   return path.join(getCommitPath(projectName, commitId, commitsDir), COMMENTS_FILE);
 }
 
+// Throws when the file can't be read safely (corrupt, or from a newer DAWLab);
+// the renderer then shows no comments and won't save over it.
 ipcMain.handle("get-commit-comments", async (_ev, projectName: string, commitId: string) => {
   const file = commentsPath(projectName, commitId);
   if (!fs.existsSync(file)) return [];
   try {
-    const parsed = JSON.parse(await fs.promises.readFile(file, "utf8"));
-    return Array.isArray(parsed) ? parsed : [];
+    return parseCommentsFile(await fs.promises.readFile(file, "utf8"));
   } catch (err) {
     console.error(`[main.ts] Unreadable comments for commit ${commitId}:`, err);
-    return [];
+    throw err;
   }
 });
 
@@ -687,7 +689,9 @@ ipcMain.handle(
     const file = commentsPath(projectName, commitId);
     // Only write into a version that exists; never create stray commit dirs.
     if (!fs.existsSync(path.dirname(file))) throw new Error(`Unknown commit ${commitId}`);
-    writeJsonSync(file, comments);
+    // Never overwrite a file we can't read (e.g. written by a newer DAWLab).
+    if (fs.existsSync(file)) parseCommentsFile(fs.readFileSync(file, "utf8"));
+    writeJsonSync(file, serializeComments(comments));
     return { success: true };
   },
 );
