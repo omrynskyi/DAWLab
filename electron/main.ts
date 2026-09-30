@@ -17,6 +17,7 @@ import {
   deleteProject,
   updateProjectLog,
   updateProjectInRegistry,
+  setCommitTags,
   openProject,
   checkProjectModified,
   getProjectLastSaveTime,
@@ -1039,6 +1040,25 @@ ipcMain.handle('delete-tag-from-project', async (_ev, projectId: string, tag: st
     console.error("[main.ts] Error deleting tag:", err);
     throw err;
   }
+});
+
+// Replace the tags on a single version (commit).
+ipcMain.handle('set-commit-tags', async (_ev, projectName: string, commitId: string, tags: string[]) => {
+  return setCommitTags(projectName, commitId, tags);
+});
+
+// Project state: stage, tasks and notepad. Partial updates — only the given
+// fields are written.
+ipcMain.handle('update-project-state', async (_ev, projectId: string, updates: Record<string, any>) => {
+  const localProject = getAllProjects().find((p: any) => p.project_id === projectId);
+  if (!localProject) throw new Error('Project not found');
+
+  const allowed: Record<string, any> = {};
+  for (const key of ['stage', 'tasks', 'notepad']) {
+    if (key in updates) allowed[key] = updates[key];
+  }
+  await updateProjectInRegistry(localProject.name, allowed);
+  return { success: true };
 });
 
 // Tag Color Preferences Handlers

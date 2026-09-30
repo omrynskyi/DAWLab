@@ -12,6 +12,7 @@ import { Bookmark, Check, RotateCcw, Music } from "lucide-react";
 import { ContextMenu, createCommitMenuItems } from "@/components/ContextMenu";
 import { InputModal } from "@/components/InputModal";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import { TagChip } from "@/components/ui/TagChip";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -23,6 +24,7 @@ export interface CommitData {
   message: string;
   author: string;
   preview_file?: string;
+  tags?: string[];
 }
 
 export interface CommitGraphProps {
@@ -43,6 +45,10 @@ export interface CommitGraphProps {
   isCreatingCommit?: boolean;
   selectedCommitId?: string | null;
   onCommitSelect?: (commitId: string) => void;
+  /** Saved tag colors, shared with project tags. */
+  tagColors?: Record<string, string>;
+  /** Open the version-tag editor for a commit, anchored at a screen point. */
+  onEditTags?: (commitId: string, x: number, y: number) => void;
 }
 
 // ============================================================================
@@ -174,6 +180,8 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
   isCreatingCommit = false,
   selectedCommitId: selectedCommitIdProp,
   onCommitSelect,
+  tagColors = {},
+  onEditTags,
 }) => {
   const [selectedCommitId, setSelectedCommitId] = useState<string | null>(null);
   const [_currentPage, _setCurrentPage] = useState<number>(0); // Keeping state for now but layout is horizontal
@@ -327,6 +335,14 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
   const handleDeleteCommit = () => {
     if (contextMenu && onDeleteCommit) {
       onDeleteCommit(contextMenu.commitId);
+      setContextMenu(null);
+    }
+  };
+
+  // Handler when "Edit Version Tags" is clicked
+  const handleEditTags = () => {
+    if (contextMenu && onEditTags) {
+      onEditTags(contextMenu.commitId, contextMenu.x, contextMenu.y);
       setContextMenu(null);
     }
   };
@@ -567,6 +583,27 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
                       {commit.preview_file && (
                         <Music size={12} className="text-blue-400" />
                       )}
+                      {(commit.tags || []).length > 0 && (
+                        <>
+                          <TagChip
+                            tag={commit.tags![0]}
+                            color={tagColors[commit.tags![0]]}
+                            onClick={
+                              onEditTags
+                                ? (e) => {
+                                    e.stopPropagation();
+                                    onEditTags(commit.commit_id, e.clientX, e.clientY);
+                                  }
+                                : undefined
+                            }
+                          />
+                          {commit.tags!.length > 1 && (
+                            <span className="text-xs text-gray-500">
+                              +{commit.tags!.length - 1}
+                            </span>
+                          )}
+                        </>
+                      )}
                     </div>
                     <span className="author">{commit.author || "Unknown"}</span>
                   </div>
@@ -621,6 +658,7 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
             handlePreviewCommit,
             handleBranchFromCommit,
             onDeleteCommit ? handleDeleteCommit : undefined,
+            onEditTags ? handleEditTags : undefined,
           )}
         />
       )}

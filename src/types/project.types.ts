@@ -36,6 +36,7 @@ export interface Commit {
   message: string;
   author: string;
   preview_file?: string;
+  tags?: string[];    // Version tags, e.g. "Rough Mix", "Master"
 }
 
 /**

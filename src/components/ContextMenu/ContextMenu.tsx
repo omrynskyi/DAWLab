@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Pencil, Trash2Icon, GitBranch, Eye } from "lucide-react";
+import { Pencil, Trash2Icon, GitBranch, Eye, Tag } from "lucide-react";
 import "./ContextMenu.css";
 
 export interface ContextMenuItem {
@@ -54,6 +54,7 @@ export const createCommitMenuItems = (
   onPreviewCommit: () => void,
   onBranchFromCommit: () => void,
   onDeleteCommit?: () => void,
+  onEditTags?: () => void,
 ): ContextMenuItem[] => {
   const items: ContextMenuItem[] = [
     {
@@ -67,6 +68,14 @@ export const createCommitMenuItems = (
       onClick: onBranchFromCommit,
     },
   ];
+
+  if (onEditTags) {
+    items.push({
+      label: "Edit Version Tags",
+      icon: <Tag size={14} />,
+      onClick: onEditTags,
+    });
+  }
 
   if (onDeleteCommit) {
     items.push({

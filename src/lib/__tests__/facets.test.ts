@@ -141,3 +141,26 @@ describe('projectMatchesFacets', () => {
     expect(projectMatchesFacets(abletonFast, active)).toBe(true);
   });
 });
+
+describe('stage and version facets', () => {
+  it('derives a stage facet only for known stages', () => {
+    expect(deriveFacets(makeProject({ stage: 'mixing' })).filter(f => f.type === 'stage'))
+      .toEqual([{ type: 'stage', value: 'mixing', label: 'Mixing' }]);
+    expect(deriveFacets(makeProject({ stage: 'bogus' })).some(f => f.type === 'stage')).toBe(false);
+  });
+
+  it('keeps stages in lifecycle order in the filter panel', () => {
+    const groups = collectFacets([
+      makeProject({ id: 'a', stage: 'finished' }),
+      makeProject({ id: 'b', stage: 'idea' }),
+      makeProject({ id: 'c', stage: 'mixing' }),
+    ]);
+    expect(groups.get('stage')!.map(f => f.value)).toEqual(['idea', 'mixing', 'finished']);
+  });
+
+  it('filters by version tag independently of project tags', () => {
+    const project = makeProject({ tags: ['Master'], versionTags: ['Rough Mix'] });
+    expect(projectMatchesFacets(project, new Set([facetKey({ type: 'version', value: 'Rough Mix' })]))).toBe(true);
+    expect(projectMatchesFacets(project, new Set([facetKey({ type: 'version', value: 'Master' })]))).toBe(false);
+  });
+});

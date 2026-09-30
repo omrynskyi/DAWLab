@@ -15,6 +15,17 @@ export interface ProjectInfo {
     privacy_flag?: string
     tags?: string[]
     storage_mode?: 'home' | 'project'
+    // Project state — where the song is in its lifecycle and what's left to do.
+    // Scoped to the project (not a version), so it lives in the registry.
+    stage?: string
+    tasks?: ProjectTask[]
+    notepad?: string
+}
+
+export interface ProjectTask {
+    id: string
+    text: string
+    done: boolean
 }
 
 export interface PluginInfo {
@@ -55,6 +66,8 @@ export interface ProjectLog {
             timestamp: string;
             message: string;
             author: string;
+            // Free-form labels (e.g. "Rough Mix", "Master") for telling versions apart.
+            tags?: string[];
         }>;
     }>;
     lastCheckout: { commitId: string; timestamp: string } | null;

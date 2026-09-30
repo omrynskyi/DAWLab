@@ -31,6 +31,7 @@ describe('deriveProjectFacetData', () => {
       previewFile: null,
       previewCommitMessage: null,
       previewCommitTimestamp: null,
+      versionTags: [],
     })
   })
 
@@ -166,5 +167,20 @@ describe('deriveProjectFacetData', () => {
     const result = deriveProjectFacetData(log)
     expect(result.previewCommitId).toBe('f1')
     expect(result.previewFile).toBe('feature.mp3')
+  })
+
+  it('collects version tags from every branch, deduped case-insensitively', () => {
+    const log = makeLog({
+      branches: [
+        { name: 'main', commits: [
+          { commit_id: 'a', timestamp: '1', message: 'm', author: 'x', tags: ['Rough Mix'] },
+          { commit_id: 'b', timestamp: '2', message: 'm', author: 'x' },
+        ] },
+        { name: 'alt', commits: [
+          { commit_id: 'c', timestamp: '3', message: 'm', author: 'x', tags: ['rough mix', 'Master'] },
+        ] },
+      ],
+    })
+    expect(deriveProjectFacetData(log).versionTags).toEqual(['Rough Mix', 'Master'])
   })
 })

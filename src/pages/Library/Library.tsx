@@ -29,6 +29,7 @@ import {
   FACET_GROUP_LABELS,
 } from '@/lib/facets';
 import type { Facet } from '@/lib/facets';
+import { getStage, openTaskCount } from '@/lib/projectState';
 import { buildTagSuggestions } from '@/lib/tags';
 import { moveBlockNextTo } from '@/lib/reorder';
 import { useMarqueeSelect } from '@/hooks/useMarqueeSelect';
@@ -262,6 +263,7 @@ export const Library: React.FC = () => {
         previewFile: string | null;
         previewCommitMessage: string | null;
         previewCommitTimestamp: string | null;
+        versionTags: string[];
       }> = await window.ipcRenderer.invoke('get-project-facets').catch(() => ({}));
 
       const convertedProjects: Project[] = dawvcsProjects.map((p: any, index: number) => {
@@ -286,6 +288,9 @@ export const Library: React.FC = () => {
           previewFile: facets?.previewFile ?? null,
           previewCommitMessage: facets?.previewCommitMessage ?? null,
           previewCommitTimestamp: facets?.previewCommitTimestamp ?? null,
+          versionTags: facets?.versionTags ?? [],
+          stage: p.stage ?? null,
+          openTasks: openTaskCount(p.tasks),
         };
       });
       setProjects(convertedProjects);
@@ -465,6 +470,8 @@ export const Library: React.FC = () => {
   // Compact one-line summary of a project's key facets for the card.
   const projectMetaLine = (p: Project): string => {
     const parts: string[] = [];
+    const stage = getStage(p.stage);
+    if (stage) parts.push(stage.label);
     const daw = shortDaw(p.daw);
     if (daw) parts.push(daw);
     if (p.bpm != null && p.bpm > 0) parts.push(`${Math.round(p.bpm)} BPM`);
@@ -978,13 +985,16 @@ export const Library: React.FC = () => {
     return base.filter(p => projectMatchesFacets(p, activeFacets));
   }, [projects, currentListProjects, activeFacets, normalizedQuery]);
 
-  // Text search on top of the facet filter: matches project name, DAW, tags and plugins.
+  // Text search on top of the facet filter: matches project name, DAW, stage,
+  // project and version tags, and plugins.
   const searchedProjects = useMemo(() => {
     if (!normalizedQuery) return facetFilteredProjects;
     return facetFilteredProjects.filter(p =>
       p.name.toLowerCase().includes(normalizedQuery) ||
       (p.daw || '').toLowerCase().includes(normalizedQuery) ||
+      (getStage(p.stage)?.label.toLowerCase().includes(normalizedQuery) ?? false) ||
       (p.tags || []).some(t => t.toLowerCase().includes(normalizedQuery)) ||
+      (p.versionTags || []).some(t => t.toLowerCase().includes(normalizedQuery)) ||
       (p.plugins || []).some(pl => pl.name.toLowerCase().includes(normalizedQuery))
     );
   }, [facetFilteredProjects, normalizedQuery]);
@@ -1034,7 +1044,7 @@ export const Library: React.FC = () => {
   // the pool offered when adding a tag to any project.
   const tagSuggestions = useMemo(() => {
     const known = new Set<string>();
-    for (const p of projects) for (const t of p.tags || []) known.add(t);
+    for (const p of projects) for (const t of [...(p.tags || []), ...(p.versionTags || [])]) known.add(t);
     for (const t of Object.keys(tagColors)) known.add(t);
     return buildTagSuggestions(Array.from(known), tagColors);
   }, [projects, tagColors]);
@@ -1315,7 +1325,7 @@ export const Library: React.FC = () => {
               ref={searchInputRef}
               className="search-input"
               type="text"
-              placeholder="Search by name, DAW, tag, plugin…"
+              placeholder="Search by name, stage, tag, plugin…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -1996,6 +2006,8 @@ export const Library: React.FC = () => {
             ? <img src={getProjectIcon(quickLookProject.daw)!} alt={quickLookProject.daw} />
             : <Music size={72} />}
           details={[
+            getStage(quickLookProject.stage) && { label: 'Stage', value: getStage(quickLookProject.stage)!.label },
+            !!quickLookProject.openTasks && { label: 'Open tasks', value: String(quickLookProject.openTasks) },
             shortDaw(quickLookProject.daw) && { label: 'DAW', value: shortDaw(quickLookProject.daw) },
             quickLookProject.bpm != null && quickLookProject.bpm > 0 && { label: 'BPM', value: String(Math.round(quickLookProject.bpm)) },
             quickLookProject.trackCount != null && quickLookProject.trackCount > 0 && { label: 'Tracks', value: String(quickLookProject.trackCount) },

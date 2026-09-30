@@ -30,6 +30,8 @@ export interface ProjectFacetData {
     previewCommitMessage: string | null;
     /** ISO timestamp of `previewCommitId`. */
     previewCommitTimestamp: string | null;
+    /** Every tag applied to any version on any branch, deduped case-insensitively. */
+    versionTags: string[];
 }
 
 /** A commit as stored in the log — includes `preview_file`, which the shared ProjectLog type omits. */
@@ -49,6 +51,7 @@ export function deriveProjectFacetData(log: ProjectLog | null | undefined): Proj
         previewFile: null,
         previewCommitMessage: null,
         previewCommitTimestamp: null,
+        versionTags: [],
     };
     if (!log) return empty;
 
@@ -84,6 +87,21 @@ export function deriveProjectFacetData(log: ProjectLog | null | undefined): Proj
         }
     }
 
+    // Version tags come from every branch — a tag on an alternative still makes
+    // the project findable by that tag in the Library.
+    const seenTags = new Set<string>();
+    const versionTags: string[] = [];
+    for (const b of log.branches ?? []) {
+        for (const c of b.commits ?? []) {
+            for (const tag of c.tags ?? []) {
+                const key = tag.toLowerCase();
+                if (!tag || seenTags.has(key)) continue;
+                seenTags.add(key);
+                versionTags.push(tag);
+            }
+        }
+    }
+
     return {
         bpm,
         plugins,
@@ -93,6 +111,7 @@ export function deriveProjectFacetData(log: ProjectLog | null | undefined): Proj
         previewFile: previewCommit?.preview_file ?? null,
         previewCommitMessage: previewCommit?.message ?? null,
         previewCommitTimestamp: previewCommit?.timestamp ?? null,
+        versionTags,
     };
 }
 

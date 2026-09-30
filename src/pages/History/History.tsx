@@ -45,6 +45,12 @@ import flLogo from "@/assets/fl_logo.png";
 import reaperLogo from "@/assets/reaper_logo.png";
 import protoolsLogo from "@/assets/protools_logo.svg";
 import { BranchMenu } from "@/components/BranchMenu/BranchMenu";
+import { ProjectProgress } from "@/components/ProjectProgress/ProjectProgress";
+import { TagChip } from "@/components/ui/TagChip";
+import { TagManagerPopover } from "@/components/TagManagerPopover/TagManagerPopover";
+import { useProjectState } from "@/hooks/useProjectState";
+import { buildTagSuggestions } from "@/lib/tags";
+import { openTaskCount } from "@/lib/projectState";
 import "./History.css";
 import { useUsername } from "@/hooks/useUsername";
 export const History: React.FC = () => {
@@ -69,7 +75,7 @@ export const History: React.FC = () => {
   const [focusedCommitId, setFocusedCommitId] = useState<string | null>(null);
   
   /** Mobile tab state for Files/Plugins toggle */
-  const [activeMobileTab, setActiveMobileTab] = useState<"files" | "plugins">(
+  const [activeMobileTab, setActiveMobileTab] = useState<"files" | "plugins" | "tasks">(
     "files",
   );
 
@@ -154,6 +160,132 @@ export const History: React.FC = () => {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isUploadingPreview, setIsUploadingPreview] = useState(false);
   const pendingSeekRef = useRef<number | null>(null);
+
+  // ---- Project state (tasks, notepad) ----
+  const projectState = useProjectState(projectId);
+
+  // ---- Version tags ----
+  const [tagColors, setTagColors] = useState<Record<string, string>>({});
+  // Tags used anywhere in the library, so versions can reuse project tags.
+  const [libraryTags, setLibraryTags] = useState<string[]>([]);
+  const [versionTagPopover, setVersionTagPopover] = useState<{
+    commitId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  // Filter on the version cards; OR semantics (a version matches any active tag).
+  const [activeVersionTags, setActiveVersionTags] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    Promise.all([
+      window.ipcRenderer.invoke("load-tag-colors").catch(() => ({})),
+      window.ipcRenderer.invoke("get-all-projects").catch(() => null),
+    ]).then(([colors, all]) => {
+      setTagColors(colors || {});
+      const gathered = new Set<string>();
+      for (const p of all?.projects || []) for (const t of p.tags || []) gathered.add(t);
+      setLibraryTags(Array.from(gathered));
+    });
+  }, []);
+
+  // Filters are per-branch — start clean when switching alternatives.
+  useEffect(() => {
+    setActiveVersionTags(new Set());
+  }, [selectedBranch]);
+
+  const branchCommits = useMemo(
+    () => projectLog?.branches.find((b) => b.name === selectedBranch)?.commits || [],
+    [projectLog, selectedBranch],
+  );
+
+  // Every version tag on the current branch, in first-seen order.
+  const branchVersionTags = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of branchCommits) {
+      for (const t of c.tags || []) {
+        if (seen.has(t)) continue;
+        seen.add(t);
+        out.push(t);
+      }
+    }
+    return out;
+  }, [branchCommits]);
+
+  // Ignore active filters whose tag no longer exists on this branch (e.g. just removed).
+  const effectiveVersionFilter = useMemo(
+    () => branchVersionTags.filter((t) => activeVersionTags.has(t)),
+    [branchVersionTags, activeVersionTags],
+  );
+
+  const visibleCommits = useMemo(() => {
+    if (effectiveVersionFilter.length === 0) return branchCommits;
+    return branchCommits.filter((c) =>
+      (c.tags || []).some((t) => effectiveVersionFilter.includes(t)),
+    );
+  }, [branchCommits, effectiveVersionFilter]);
+
+  const versionTagSuggestions = useMemo(() => {
+    const known = new Set<string>(libraryTags);
+    for (const b of projectLog?.branches || []) {
+      for (const c of b.commits) for (const t of c.tags || []) known.add(t);
+    }
+    for (const t of Object.keys(tagColors)) known.add(t);
+    return buildTagSuggestions(Array.from(known), tagColors);
+  }, [libraryTags, projectLog, tagColors]);
+
+  /** Optimistically replace a version's tags, reverting if the write fails. */
+  const updateCommitTags = (commitId: string, tags: string[]) => {
+    const apply = (next: (prevTags: string[]) => string[]) =>
+      setProjectLog((prev) =>
+        prev
+          ? {
+              ...prev,
+              branches: prev.branches.map((b) => ({
+                ...b,
+                commits: b.commits.map((c) =>
+                  String(c.commit_id) === String(commitId)
+                    ? { ...c, tags: next(c.tags || []) }
+                    : c,
+                ),
+              })),
+            }
+          : prev,
+      );
+
+    const previous = findCommitTags(commitId);
+    apply(() => tags);
+
+    window.ipcRenderer
+      .invoke("set-commit-tags", passedProject, commitId, tags)
+      .catch((err: unknown) => {
+        console.error("[History] Failed to save version tags:", err);
+        apply(() => previous);
+      });
+  };
+
+  const findCommitTags = (commitId: string): string[] => {
+    for (const b of projectLog?.branches || []) {
+      const c = b.commits.find((c) => String(c.commit_id) === String(commitId));
+      if (c) return c.tags || [];
+    }
+    return [];
+  };
+
+  const handleAddVersionTag = (commitId: string, tag: string, color: string) => {
+    const current = findCommitTags(commitId);
+    if (current.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+    if (color && color !== "#007bff" && !tagColors[tag]) {
+      setTagColors((prev) => ({ ...prev, [tag]: color }));
+      window.ipcRenderer.invoke("save-tag-color", tag, color).catch(() => {});
+    }
+    updateCommitTags(commitId, [...current, tag]);
+  };
+
+  const handleRemoveVersionTag = (commitId: string, tag: string) => {
+    updateCommitTags(commitId, findCommitTags(commitId).filter((t) => t !== tag));
+  };
+
 
   /**
    * Handle file drop for audio preview
@@ -1560,15 +1692,42 @@ export const History: React.FC = () => {
         <>
           {/* ===== COMMIT GRAPH SECTION ===== */}
 
+          {branchVersionTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-6 mb-2">
+              {branchVersionTags.map((tag) => (
+                <TagChip
+                  key={tag}
+                  tag={tag}
+                  color={tagColors[tag]}
+                  active={activeVersionTags.has(tag)}
+                  onClick={() =>
+                    setActiveVersionTags((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(tag)) next.delete(tag);
+                      else next.add(tag);
+                      return next;
+                    })
+                  }
+                />
+              ))}
+              {effectiveVersionFilter.length > 0 && (
+                <span className="text-xs text-gray-500">
+                  {visibleCommits.length} of {branchCommits.length} versions
+                </span>
+              )}
+            </div>
+          )}
+
           {(() => {
-            const currentBranch = projectLog.branches.find(
-              (b) => b.name === selectedBranch,
-            );
-            const commits = currentBranch?.commits || [];
+            const commits = visibleCommits;
 
             return commits.length > 0 ? (
               <CommitGraph
                 commits={commits}
+                tagColors={tagColors}
+                onEditTags={(commitId, x, y) =>
+                  setVersionTagPopover({ commitId, x, y })
+                }
                 onCheckout={handleCheckout}
                 onDeleteCommit={handleDeleteCommitRequest}
                 onBranchCreate={handleBranchFromCommit}
@@ -1636,6 +1795,22 @@ export const History: React.FC = () => {
                   />
                 )}
               </button>
+              <button
+                onClick={() => setActiveMobileTab('tasks')}
+                className={`pb-4 text-base font-medium transition-colors relative z-10 !bg-transparent !border-none !p-0 !rounded-none ${
+                  activeMobileTab === 'tasks' ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                Tasks
+                {openTaskCount(projectState.tasks) > 0 && ` (${openTaskCount(projectState.tasks)})`}
+                {activeMobileTab === "tasks" && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0094FF] shadow-[0_0_8px_rgba(0,148,255,0.5)]"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </button>
             </div>
           </div>
 
@@ -1669,6 +1844,24 @@ export const History: React.FC = () => {
             >
               <PluginSection
                 plugins={(projectLog as any).metadata?.plugins || []}
+              />
+            </div>
+
+            {/* Tasks + Notepad (project-scoped) */}
+            <div
+              className={`
+              flex-1 min-h-0
+              ${activeMobileTab === "tasks" ? "flex flex-col" : "hidden"}
+              min-[900px]:flex min-[900px]:flex-col
+              overflow-y-auto
+            `}
+            >
+              <ProjectProgress
+                tasks={projectState.tasks}
+                onTasksChange={projectState.setTasks}
+                notepad={projectState.notepad}
+                onNotepadChange={projectState.setNotepad}
+                onNotepadBlur={projectState.flushNotepad}
               />
             </div>
 
@@ -1765,6 +1958,25 @@ export const History: React.FC = () => {
             </>
           )}
         </>
+      )}
+
+      {/* Version tag editor */}
+      {versionTagPopover && (
+        <TagManagerPopover
+          title="Version Tags"
+          x={versionTagPopover.x}
+          y={versionTagPopover.y}
+          tags={findCommitTags(versionTagPopover.commitId)}
+          tagColors={tagColors}
+          suggestions={versionTagSuggestions}
+          onAddTag={(tag, color) =>
+            handleAddVersionTag(versionTagPopover.commitId, tag, color)
+          }
+          onRemoveTag={(tag) =>
+            handleRemoveVersionTag(versionTagPopover.commitId, tag)
+          }
+          onClose={() => setVersionTagPopover(null)}
+        />
       )}
 
       {/* Path Selection Modal */}
