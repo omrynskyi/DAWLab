@@ -10,12 +10,10 @@
   },
   files: ["dist", "dist-electron"],
   mac: {
-    target: [
-      {
-        target: "dmg",
-        arch: ["x64", "arm64"],
-      },
-    ],
+    // No arch here: CI runs one job per arch (--x64 / --arm64). Listing both
+    // made every job build both DMGs at once, and the two builds share a
+    // volume name while mounted, which corrupted the arm64 image.
+    target: ["dmg"],
     icon: "src/assets/icons/logo.icns",
     artifactName: "${productName}-Mac-${arch}-${version}-Installer.${ext}",
     identity: null, // Explicitly disable code signing
