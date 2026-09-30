@@ -14,6 +14,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { ProjectLog } from "@/types/project.types";
@@ -32,12 +33,14 @@ import {
   Rewind,
   ChevronLeft,
   GalleryHorizontalEnd,
+  Maximize2,
 } from "lucide-react";
 import {
   WarningModal,
   shouldSkipWarning,
 } from "@/components/WarningModal/WarningModal";
 import { StorageWarningModal } from "../../components/ui/StorageWarningModal";
+import FeedbackView, { type FeedbackHandoff, type FeedbackVersion } from "@/components/Feedback/FeedbackView";
 import logo from "@/assets/logo.png";
 import logicLogo from "@/assets/logic_logo.png";
 import abletonLogo from "@/assets/ableton_logo.png";
@@ -160,6 +163,14 @@ export const History: React.FC = () => {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isUploadingPreview, setIsUploadingPreview] = useState(false);
   const pendingSeekRef = useRef<number | null>(null);
+
+  // Full-screen feedback view over the preview player.
+  const [feedbackSession, setFeedbackSession] = useState<{ autoPlay: boolean } | null>(null);
+  const feedbackOpenRef = useRef(false);
+  feedbackOpenRef.current = feedbackSession !== null;
+  // Whether the feedback view has taken playback over from this player yet.
+  const feedbackTookOverRef = useRef(false);
+  const feedbackClosingRef = useRef(false);
 
   // ---- Project state (tasks, notepad) ----
   const projectState = useProjectState(projectId);
@@ -431,29 +442,36 @@ export const History: React.FC = () => {
   // Handle Play/Pause
   const [audioUrl, setAudioUrl] = useState<string>("");
 
+  /** Points the player at the active version's preview; null if it's missing. */
+  const loadPreviewUrl = async (): Promise<string | null> => {
+    if (!activeCommit?.preview_file) return null;
+    try {
+      const url = await window.ipcRenderer.invoke(
+        "get-preview-url",
+        passedProject,
+        activeCommit.commit_id,
+        activeCommit.preview_file,
+      );
+      // null = the preview file is gone; don't point <audio> at a dead URL.
+      if (!url) {
+        console.error("Audio preview file not found for commit", activeCommit.commit_id);
+        return null;
+      }
+      setAudioUrl(url);
+      return url;
+    } catch (err) {
+      console.error("Failed to resolve audio preview:", err);
+      return null;
+    }
+  };
+
   const handleTogglePlay = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!activeCommit?.preview_file) return;
 
     if (!isPlaying) {
       if (!audioUrl) {
-        try {
-          const url = await window.ipcRenderer.invoke(
-            "get-preview-url",
-            passedProject,
-            activeCommit.commit_id,
-            activeCommit.preview_file,
-          );
-          // null = the preview file is gone; don't point <audio> at a dead URL.
-          if (!url) {
-            console.error("Audio preview file not found for commit", activeCommit.commit_id);
-            return;
-          }
-          setAudioUrl(url);
-          setIsPlaying(true);
-        } catch (err) {
-          console.error("Failed to resolve audio preview:", err);
-        }
+        if (await loadPreviewUrl()) setIsPlaying(true);
       } else if (audioRef.current) {
         setIsPlaying(true);
       }
@@ -505,6 +523,107 @@ export const History: React.FC = () => {
     const newTime = (clickX / rect.width) * duration;
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
+  };
+
+  /** Versions on this branch that have a preview, labelled like the player. */
+  const feedbackVersions = useMemo<FeedbackVersion[]>(
+    () =>
+      branchCommits.flatMap((c, i) =>
+        c.preview_file
+          ? [{
+              commitId: String(c.commit_id),
+              previewFile: c.preview_file,
+              label: c.message ? `Version ${i + 1} · ${c.message}` : `Version ${i + 1}`,
+            }]
+          : [],
+      ),
+    [branchCommits],
+  );
+
+  const feedbackVersion = useMemo<FeedbackVersion | null>(() => {
+    if (!activeCommit?.preview_file) return null;
+    const id = String(activeCommit.commit_id);
+    return (
+      feedbackVersions.find((v) => v.commitId === id) ?? {
+        commitId: id,
+        previewFile: activeCommit.preview_file,
+        label: activeCommit.message || "Version",
+      }
+    );
+  }, [activeCommit, feedbackVersions]);
+
+  // Open full screen. This player keeps going until the feedback view's audio
+  // is running (onTakeover), so there's no gap while it loads.
+  const handleOpenFeedback = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!feedbackVersion) return;
+    feedbackTookOverRef.current = false;
+    feedbackClosingRef.current = false;
+    setFeedbackSession({ autoPlay: isPlaying });
+  };
+
+  const handleFeedbackTakeover = () => {
+    feedbackTookOverRef.current = true;
+    audioRef.current?.pause();
+    setIsPlaying(false);
+  };
+
+  /** Resolves once the <audio> element has picked up `url` from a render. */
+  const waitForAudioSrc = (url: string) =>
+    new Promise<HTMLAudioElement | null>((resolve) => {
+      const started = performance.now();
+      const check = () => {
+        const el = audioRef.current;
+        if (el && el.getAttribute("src") === url) resolve(el);
+        else if (performance.now() - started > 1000) resolve(null);
+        else requestAnimationFrame(check);
+      };
+      check();
+    });
+
+  // Leave full screen. If it's playing, start this player at its live position
+  // and only close the overlay once ours is running, then fix any drift.
+  const handleCloseFeedback = async ({ playing, liveTime }: FeedbackHandoff) => {
+    if (feedbackClosingRef.current) return;
+    // Closed before it took over: this player never stopped, leave it be.
+    if (!feedbackTookOverRef.current) {
+      setFeedbackSession(null);
+      return;
+    }
+    if (!playing) {
+      setFeedbackSession(null);
+      const lastTime = liveTime();
+      const el = audioRef.current;
+      if (el && audioUrl) el.currentTime = lastTime;
+      else pendingSeekRef.current = lastTime;
+      setCurrentTime(lastTime);
+      return;
+    }
+
+    feedbackClosingRef.current = true;
+    const finish = () => {
+      feedbackClosingRef.current = false;
+      setFeedbackSession(null);
+    };
+    try {
+      let el = audioRef.current;
+      if (!audioUrl || !el) {
+        const url = await loadPreviewUrl();
+        el = url ? await waitForAudioSrc(url) : null;
+      }
+      if (!el) return finish();
+      pendingSeekRef.current = null;
+      el.currentTime = liveTime();
+      await applyAudioSettings(el);
+      await el.play();
+      const live = liveTime();
+      if (Math.abs(live - el.currentTime) > 0.08) el.currentTime = live;
+      setCurrentTime(el.currentTime);
+      setIsPlaying(true);
+    } catch (err) {
+      console.error("Failed to resume after full screen:", err);
+    }
+    finish();
   };
 
   const handleProgressMouseDown = (e: React.MouseEvent) => {
@@ -770,6 +889,7 @@ export const History: React.FC = () => {
    */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (feedbackOpenRef.current) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsDropdownOpen((prev) => !prev);
@@ -1917,6 +2037,14 @@ export const History: React.FC = () => {
                         {activeCommit.message}
                       </span>
                     </div>
+                    <button
+                      className="play-icon-container fullscreen-btn"
+                      onClick={handleOpenFeedback}
+                      title="Full screen feedback"
+                      aria-label="Open full screen feedback"
+                    >
+                      <Maximize2 size={18} strokeWidth={1.5} />
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -1959,6 +2087,24 @@ export const History: React.FC = () => {
           )}
         </>
       )}
+
+      {/* Full-screen feedback over everything, including the app chrome */}
+      {feedbackSession && feedbackVersion && projectLog &&
+        createPortal(
+          <FeedbackView
+            key={feedbackVersion.commitId}
+            projectName={passedProject}
+            version={feedbackVersion}
+            versions={feedbackVersions}
+            username={username || "You"}
+            // Live position when loaded; otherwise where the player is parked.
+            getStartTime={() => (audioUrl && audioRef.current ? audioRef.current.currentTime : currentTime)}
+            autoPlay={feedbackSession.autoPlay}
+            onTakeover={handleFeedbackTakeover}
+            onClose={handleCloseFeedback}
+          />,
+          document.body,
+        )}
 
       {/* Version tag editor */}
       {versionTagPopover && (
