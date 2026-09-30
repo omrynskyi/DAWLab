@@ -53,6 +53,7 @@ import { getCasPath, calculateCasSize } from "./dawvcs/core/cas";
 import { getProjectPath } from "./dawvcs/core/registry";
 import { saveProjectLog } from "./dawvcs/core/log";
 import { getCommitPath, getCommitFileMap } from "./dawvcs/core/commits";
+import { writeJsonSync } from "./dawvcs/core/fs-utils";
 import { getProjectStorageDirs } from "./dawvcs/core/storage-location";
 import { detectDAW, getProjectFileCandidates } from "./dawvcs/core/daw-detection";
 import { getCleanableFiles, cleanCasFiles } from "./dawvcs/operations/clean";
@@ -607,6 +608,28 @@ ipcMain.handle(
   }
 );
 
+/**
+ * Previews attached via addPreviewToCommit are copied into the commit dir, but
+ * previews captured during a normal commit live only in CAS (fileName is the
+ * preview's CAS hash). Prefer the commit-dir copy, fall back to CAS. Returns
+ * null when the file is gone.
+ */
+function resolvePreviewPath(projectName: string, commitId: string, fileName: string): string | null {
+  const { commitsDir: previewCommitsDir, casDir } = getProjectStorageDirs(projectName);
+  const commitPath = getCommitPath(projectName, commitId, previewCommitsDir);
+  const commitFilePath = path.join(commitPath, fileName);
+  const fullPath = fs.existsSync(commitFilePath)
+    ? commitFilePath
+    : getCasPath(fileName, casDir);
+  return fs.existsSync(fullPath) ? fullPath : null;
+}
+
+/** dawpreview:// URL for a local file, with each path segment escaped. */
+function toDawpreviewUrl(filePath: string): string {
+  const encoded = filePath.split("/").map(encodeURIComponent).join("/");
+  return `dawpreview://active${encoded.startsWith("/") ? "" : "/"}${encoded}`;
+}
+
 ipcMain.handle(
   "get-preview-url",
   async (
@@ -615,22 +638,57 @@ ipcMain.handle(
     commitId: string,
     fileName: string,
   ) => {
-    const { commitsDir: previewCommitsDir, casDir } = getProjectStorageDirs(projectName);
-    const commitPath = getCommitPath(projectName, commitId, previewCommitsDir);
-    const commitFilePath = path.join(commitPath, fileName);
-
-    // Previews attached via addPreviewToCommit are copied into the commit dir,
-    // but previews captured during a normal commit live only in CAS (fileName is
-    // the preview's CAS hash). Prefer the commit-dir copy, fall back to CAS.
-    const fullPath = fs.existsSync(commitFilePath)
-      ? commitFilePath
-      : getCasPath(fileName, casDir);
-
     // A missing file resolves to null so the renderer can surface a clear error
     // instead of pointing the <audio> element at a URL that will 404.
-    if (!fs.existsSync(fullPath)) return null;
+    const fullPath = resolvePreviewPath(projectName, commitId, fileName);
+    return fullPath ? getMediaUrl(fullPath) : null;
+  },
+);
 
-    return getMediaUrl(fullPath);
+// Both URLs for one preview: `playUrl` for <audio> (seekable loopback HTTP) and
+// `fetchUrl` for reading the bytes to draw a waveform (fetchable custom protocol).
+ipcMain.handle(
+  "get-preview-sources",
+  async (_ev, projectName: string, commitId: string, fileName: string) => {
+    const fullPath = resolvePreviewPath(projectName, commitId, fileName);
+    if (!fullPath) return null;
+    return { playUrl: await getMediaUrl(fullPath), fetchUrl: toDawpreviewUrl(fullPath) };
+  },
+);
+
+// Feedback comments are stored per version, next to the version's filemap.
+const COMMENTS_FILE = "comments.json";
+
+function commentsPath(projectName: string, commitId: string): string {
+  // commitId names a directory; refuse anything that could escape it.
+  if (!commitId || path.basename(commitId) !== commitId || commitId === "..") {
+    throw new Error(`Invalid commit id: ${commitId}`);
+  }
+  const { commitsDir } = getProjectStorageDirs(projectName);
+  return path.join(getCommitPath(projectName, commitId, commitsDir), COMMENTS_FILE);
+}
+
+ipcMain.handle("get-commit-comments", async (_ev, projectName: string, commitId: string) => {
+  const file = commentsPath(projectName, commitId);
+  if (!fs.existsSync(file)) return [];
+  try {
+    const parsed = JSON.parse(await fs.promises.readFile(file, "utf8"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error(`[main.ts] Unreadable comments for commit ${commitId}:`, err);
+    return [];
+  }
+});
+
+ipcMain.handle(
+  "save-commit-comments",
+  async (_ev, projectName: string, commitId: string, comments: unknown) => {
+    if (!Array.isArray(comments)) throw new Error("comments must be an array");
+    const file = commentsPath(projectName, commitId);
+    // Only write into a version that exists; never create stray commit dirs.
+    if (!fs.existsSync(path.dirname(file))) throw new Error(`Unknown commit ${commitId}`);
+    writeJsonSync(file, comments);
+    return { success: true };
   },
 );
 
