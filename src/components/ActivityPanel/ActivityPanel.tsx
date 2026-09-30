@@ -29,8 +29,9 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ className = '', em
         sessionStorage.setItem('version-notification-dismissed', 'true');
     };
 
+    // Opens the release page in the system browser (see setWindowOpenHandler).
     const handleUpdateNow = () => {
-        window.open('https://drive.google.com/drive/u/0/folders/1mgWYalv7KoZOGRuv3MlhcTcm4LdLfr-n', '_blank');
+        window.open(versionInfo?.releaseUrl, '_blank');
     };
 
     const showVersionNotification = versionInfo?.isOutdated && !versionDismissed;
